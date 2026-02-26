@@ -301,14 +301,14 @@
   .modal {
     background:var(--surface); border-radius:var(--radius) var(--radius) 0 0;
     border:1px solid var(--border); border-bottom:none;
-    padding:8px 20px 36px; width:100%;
+    padding:8px 20px 36px; width:100%; color:var(--text);
     transform:translateY(100%);
     transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);
   }
   .modal-overlay.open .modal { transform:translateY(0); }
   .modal-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:12px auto 20px; }
-  .modal-title { font-size:20px; font-weight:800; margin-bottom:6px; }
-  .modal-sub { font-size:14px; color:var(--text2); margin-bottom:24px; line-height:1.5; }
+  .modal-title { font-size:20px; font-weight:800; margin-bottom:6px; color:var(--text); }
+  .modal-sub { font-size:14px; color:#aaaacc; margin-bottom:24px; line-height:1.5; }
 
   /* PAYMENT OPTIONS */
   .payment-options { display:flex; flex-direction:column; gap:10px; }
@@ -321,8 +321,8 @@
   .pay-btn:active { transform:scale(0.98); border-color:var(--accent); background:rgba(108,99,255,0.1); }
   .pay-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
   .pay-info { flex:1; }
-  .pay-name { font-size:15px; font-weight:700; }
-  .pay-desc { font-size:13px; color:var(--text2); margin-top:2px; }
+  .pay-name { font-size:15px; font-weight:700; color: var(--text); }
+  .pay-desc { font-size:13px; color:#aaaacc; margin-top:2px; }
   .pay-arrow { font-size:22px; color:var(--text2); }
 
   /* SBP DETAILS SCREEN */
@@ -435,6 +435,125 @@
     line-height:1.5; margin-bottom:16px;
   }
   .info-note strong { color:var(--text); }
+
+  /* CART BADGE */
+  .nav-cart-wrap { position: relative; display: inline-flex; }
+  .cart-badge {
+    position: absolute; top: -2px; right: -6px;
+    background: var(--accent2); color: white;
+    border-radius: 10px; min-width: 18px; height: 18px;
+    font-size: 11px; font-weight: 800; display: flex;
+    align-items: center; justify-content: center; padding: 0 4px;
+    display: none;
+  }
+  .cart-badge.visible { display: flex; }
+
+  /* CART PAGE */
+  .cart-list { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+  .cart-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    animation: fadeIn 0.3s ease both;
+  }
+  .cart-item-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .cart-item-info { flex: 1; min-width: 0; }
+  .cart-item-name { font-size: 14px; font-weight: 700; color: var(--text); }
+  .cart-item-dur { font-size: 12px; color: #aaaacc; margin-top: 2px; }
+  .cart-item-price {
+    font-size: 16px; font-weight: 800;
+    font-family: 'Space Mono', monospace; color: var(--accent); flex-shrink: 0;
+  }
+  .cart-item-remove {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: rgba(255,101,132,0.1); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent2); font-size: 16px; flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .cart-item-remove:active { background: rgba(255,101,132,0.25); }
+
+  .cart-summary {
+    margin: 16px 16px 0;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px;
+  }
+  .cart-summary-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0;
+  }
+  .cart-summary-row.total {
+    border-top: 1px solid var(--border); margin-top: 8px; padding-top: 14px;
+  }
+  .cart-summary-label { font-size: 14px; color: var(--text); }
+  .cart-summary-val { font-size: 14px; font-weight: 700; font-family: 'Space Mono', monospace; color: var(--text); }
+  .cart-summary-row.total .cart-summary-label { font-size: 15px; font-weight: 700; color: var(--text); }
+  .cart-summary-row.total .cart-summary-val { font-size: 20px; color: var(--accent); }
+  .cart-checkout-btn {
+    display: block; width: calc(100% - 32px); margin: 14px 16px 0;
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    border: none; border-radius: 14px; padding: 16px;
+    font-family: 'Manrope', sans-serif; font-size: 16px; font-weight: 700;
+    color: white; cursor: pointer; box-shadow: 0 4px 20px rgba(108,99,255,0.35);
+    transition: all 0.2s;
+  }
+  .cart-checkout-btn:active { transform: scale(0.98); }
+  .cart-checkout-btn:disabled { opacity: 0.4; }
+
+  /* ADD TO CART btn in product modal */
+  .btn-add-cart {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--accent); border-radius: 14px; padding: 14px;
+    font-family: 'Manrope', sans-serif; font-size: 15px; font-weight: 700;
+    color: var(--accent); cursor: pointer; transition: all 0.2s; margin-top: 8px;
+  }
+  .btn-add-cart:active { background: rgba(108,99,255,0.15); }
+
+  /* ORDER ITEMS */
+  .order-item-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .order-item-row:last-of-type { border-bottom: none; }
+  .order-item-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .order-item-info { flex: 1; }
+  .order-item-name { font-size: 14px; font-weight: 700; }
+  .order-item-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .order-item-price {
+    font-family: 'Space Mono', monospace; font-size: 14px;
+    font-weight: 700; color: var(--text); flex-shrink: 0;
+  }
+
+  /* QTY CONTROLS IN CART */
+  .cart-item-price-row {
+    display: flex; align-items: center; justify-content: space-between; margin-top: 8px;
+  }
+  .cart-qty-ctrl {
+    display: flex; align-items: center; gap: 0;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  }
+  .cart-qty-btn {
+    width: 30px; height: 28px; border: none; background: transparent;
+    color: var(--text); font-size: 18px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .cart-qty-btn:active { background: var(--surface2); }
+  .cart-qty-num {
+    min-width: 28px; text-align: center;
+    font-family: 'Space Mono', monospace; font-size: 14px; font-weight: 700;
+    color: #ffffff;
+  }
+  .cart-item-info { flex: 1; }
+  .cart-item-dur { font-size: 12px; color: #aaaacc; margin-top: 2px; }
+  .cart-item-price { font-family: 'Space Mono', monospace; font-size: 16px; font-weight: 800; color: var(--accent); }
 </style>
 </head>
 <body>
@@ -487,6 +606,23 @@
   <div class="services-grid" id="services-grid"></div>
 </div>
 
+
+<!-- ══════════════ CART PAGE ══════════════ -->
+<div id="page-cart" class="page page-hidden">
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">
+        <div class="logo-icon" style="background:linear-gradient(135deg,#6c63ff,#ff6584)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2zM7.17 14.75l.03-.12.9-1.63H17c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0021.46 4H5.21l-.94-2H1v2h2l3.6 7.59L5.25 14c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h12v-2H7.42c-.13 0-.25-.11-.25-.25z"/></svg>
+        </div>
+        <div class="logo-text">Корзина</div>
+      </div>
+      <button onclick="clearCart()" style="background:transparent;border:none;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;padding:6px 10px;border-radius:8px;border:1px solid var(--border);">Очистить</button>
+    </div>
+  </div>
+  <div id="cart-content" style="padding-top:16px; padding-bottom:120px;"></div>
+</div>
+
 <!-- ══════════════ ORDERS PAGE ══════════════ -->
 <div id="page-orders" class="page page-hidden">
   <div class="header">
@@ -525,7 +661,8 @@
     <div class="product-features" id="ph-features"></div>
     <div class="product-variants-title">Выбери вариант</div>
     <div class="product-variants" id="ph-variants"></div>
-    <button class="btn-primary" id="ph-order-btn" disabled style="opacity:0.4">Выбери вариант ↑</button>
+    <button class="btn-primary" id="ph-order-btn" disabled style="opacity:0.4">Оформить сейчас →</button>
+    <button class="btn-add-cart" id="ph-cart-btn" disabled style="opacity:0.4">🛒 В корзину</button>
   </div>
 </div>
 
@@ -691,6 +828,13 @@
   <button class="nav-btn active" id="nav-catalog" onclick="showPage('catalog')">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
     Каталог
+  </button>
+  <button class="nav-btn" id="nav-cart" onclick="showPage('cart')">
+    <div class="nav-cart-wrap">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2zM7.17 14.75l.03-.12.9-1.63H17c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1 1 0 0021.46 4H5.21l-.94-2H1v2h2l3.6 7.59L5.25 14c-.16.28-.25.61-.25.96C5 16.1 5.9 17 7 17h12v-2H7.42c-.13 0-.25-.11-.25-.25z"/></svg>
+      <span class="cart-badge" id="cart-badge">0</span>
+    </div>
+    Корзина
   </button>
   <button class="nav-btn" id="nav-orders" onclick="showPage('orders')">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14l-5-5 1.4-1.4L12 14.2l7.6-7.6L21 8l-9 9z"/></svg>
@@ -934,6 +1078,12 @@ function openProductModal(svcId) {
   };
 
   openModal('modal-product');
+
+  // Wire up "add to cart" button
+  document.getElementById('ph-cart-btn').onclick = () => {
+    if (!selectedVariant) return;
+    addToCart(svc, selectedVariant);
+  };
 }
 
 function selectVariantInModal(svcId, varId) {
@@ -948,9 +1098,12 @@ function selectVariantInModal(svcId, varId) {
   selectedVariant = variant;
 
   const btn = document.getElementById('ph-order-btn');
-  btn.textContent = `Оформить — ${variant.price}₽ →`;
+  btn.textContent = `Оформить сейчас — ${variant.price}₽ →`;
   btn.disabled = false;
   btn.style.opacity = '1';
+  const cartBtn = document.getElementById('ph-cart-btn');
+  cartBtn.disabled = false;
+  cartBtn.style.opacity = '1';
 
   showBottomBar(`${svc.name} — ${variant.dur}`, variant.price);
 }
@@ -1135,6 +1288,18 @@ document.getElementById('card-pay-btn').addEventListener('click', () => {
 // TELEGRAM COMMUNICATION
 // ══════════════════════════════════════════════
 function sendOrderToBot(payMethod) {
+  // If cart checkout
+  if (cart.length && !selectedVariant) {
+    const data = JSON.stringify({
+      action: 'create_cart_order',
+      items: cart.map(i => ({service_id: i.svc.id, variant_id: i.variant.id, service_name: i.svc.name, variant_dur: i.variant.dur, amount: i.variant.price, qty: i.qty})),
+      total: cartTotal(),
+      payment: payMethod,
+      order_id: currentOrderId,
+    });
+    if (tg) tg.sendData(data);
+    return;
+  }
   const data = JSON.stringify({
     action: 'create_order',
     service_id: selectedService.id,
@@ -1172,16 +1337,19 @@ document.querySelectorAll('.cat-btn').forEach(btn => {
 // ══════════════════════════════════════════════
 function showPage(page) {
   document.getElementById('page-catalog').classList.toggle('page-hidden', page !== 'catalog');
+  document.getElementById('page-cart').classList.toggle('page-hidden', page !== 'cart');
   document.getElementById('page-orders').classList.toggle('page-hidden', page !== 'orders');
   document.getElementById('nav-catalog').classList.toggle('active', page === 'catalog');
+  document.getElementById('nav-cart').classList.toggle('active', page === 'cart');
   document.getElementById('nav-orders').classList.toggle('active', page === 'orders');
 
+  hideBottomBar();
+  closeAllModals();
+
   if (page === 'orders') {
-    hideBottomBar();
-    closeAllModals();
     renderOrders();
-  } else {
-    if (selectedVariant) showBottomBar(`${selectedService.name} — ${selectedVariant.dur}`, selectedVariant.price);
+  } else if (page === 'cart') {
+    renderCart();
   }
 }
 
@@ -1190,8 +1358,6 @@ function showPage(page) {
 // ══════════════════════════════════════════════
 function renderOrders() {
   const cont = document.getElementById('orders-content');
-  // Заказы приходят из бота через Telegram.WebApp.initData
-  // Для демо — показываем пустое или пример
   const orders = window._orders || [];
 
   if (!orders.length) {
@@ -1205,27 +1371,41 @@ function renderOrders() {
   }
 
   const statusMap = {
-    completed: ['✅ Выполнен','status-completed'],
-    pending:   ['⏳ Ожидание','status-pending'],
-    processing:['🔄 Обработка','status-processing'],
-    cancelled: ['❌ Отменён','status-cancelled'],
+    completed:  { label: '✅ Выполнен',  cls: 'status-completed' },
+    pending:    { label: '⏳ Ожидание',  cls: 'status-pending' },
+    processing: { label: '🔄 Обработка', cls: 'status-processing' },
+    cancelled:  { label: '❌ Отменён',   cls: 'status-cancelled' },
   };
 
   cont.innerHTML = `<div class="orders-list">${orders.map(o => {
-    const [label, cls] = statusMap[o.status] || ['❓',''];
+    const st = statusMap[o.status] || { label: '❓', cls: '' };
+    const itemsHtml = (o.items || [{ logo: o.logo, colorClass: o.colorClass, service: o.service, dur: o.dur, qty: 1, price: o.price }]).map(it => `
+      <div class="order-item-row">
+        <div class="order-item-icon ${it.colorClass}">${LOGOS[it.logo]}</div>
+        <div class="order-item-info">
+          <div class="order-item-name">${it.service}</div>
+          <div class="order-item-meta">${it.dur}${it.qty > 1 ? ' × ' + it.qty : ''}</div>
+        </div>
+        <div class="order-item-price">${it.price * it.qty}₽</div>
+      </div>`).join('');
     return `
       <div class="order-card">
-        <div class="order-row">
-          <div class="order-service">${o.service}</div>
-          <span class="status-badge ${cls}">${label}</span>
+        <div class="order-row" style="margin-bottom:12px;">
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);">Заказ #${o.id}</div>
+            <div style="font-size:12px;color:var(--text2);">${o.date} · ${o.payment || ''}</div>
+          </div>
+          <span class="status-badge ${st.cls}">${st.label}</span>
         </div>
-        <div class="order-row" style="margin-top:8px;">
-          <div class="order-date">#${o.id} · ${o.dur} · ${o.date}</div>
-          <div style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;">${o.price}₽</div>
+        ${itemsHtml}
+        <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:13px;color:var(--text2);font-weight:600;">Итого</span>
+          <span style="font-family:'Space Mono',monospace;font-size:17px;font-weight:800;color:var(--accent);">${o.total || o.price}₽</span>
         </div>
       </div>`;
   }).join('')}</div>`;
 }
+
 
 // ══════════════════════════════════════════════
 // USER INFO
@@ -1240,6 +1420,127 @@ if (tg?.initDataUnsafe?.user) {
 // ══════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════
+
+// ══════════════════════════════════════════════
+// CART
+// ══════════════════════════════════════════════
+let cart = []; // [{svc, variant, qty}]
+
+function cartTotal() {
+  return cart.reduce((s, item) => s + item.variant.price * item.qty, 0);
+}
+
+function cartCount() {
+  return cart.reduce((s, item) => s + item.qty, 0);
+}
+
+function updateCartBadge() {
+  const badge = document.getElementById('cart-badge');
+  const count = cartCount();
+  badge.textContent = count;
+  badge.classList.toggle('visible', count > 0);
+}
+
+function addToCart(svc, variant) {
+  const existing = cart.find(i => i.variant.id === variant.id);
+  if (existing) {
+    existing.qty++;
+  } else {
+    cart.push({ svc, variant, qty: 1 });
+  }
+  updateCartBadge();
+  showToast('🛒 Добавлено в корзину!');
+  closeModal('modal-product');
+  hideBottomBar();
+  selectedVariant = null;
+  selectedService = null;
+}
+
+function removeFromCart(variantId) {
+  cart = cart.filter(i => i.variant.id !== variantId);
+  updateCartBadge();
+  renderCart();
+}
+
+function clearCart() {
+  cart = [];
+  updateCartBadge();
+  renderCart();
+}
+
+function renderCart() {
+  const cont = document.getElementById('cart-content');
+  if (!cart.length) {
+    cont.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">🛒</div>
+        <div class="title">Корзина пуста</div>
+        <div class="desc">Добавь товары из каталога</div>
+      </div>`;
+    return;
+  }
+
+  const total = cartTotal();
+
+  const itemsHtml = cart.map(item => `
+    <div class="cart-item">
+      <div class="cart-item-icon ${item.svc.colorClass}">${LOGOS[item.svc.logo]}</div>
+      <div class="cart-item-info">
+        <div class="cart-item-name">${item.svc.name}</div>
+        <div class="cart-item-dur">${item.variant.dur}</div>
+        <div class="cart-item-price-row">
+          <div class="cart-qty-ctrl">
+            <button class="cart-qty-btn" onclick="changeQty(${item.variant.id}, -1)">−</button>
+            <span class="cart-qty-num">${item.qty}</span>
+            <button class="cart-qty-btn" onclick="changeQty(${item.variant.id}, 1)">+</button>
+          </div>
+          <div class="cart-item-price">${item.variant.price * item.qty}₽</div>
+        </div>
+      </div>
+      <button class="cart-item-remove" onclick="removeFromCart(${item.variant.id})">✕</button>
+    </div>`).join('');
+
+  // Строки с разбивкой
+  const breakdownHtml = cart.map(i => `
+    <div class="cart-summary-row">
+      <span class="cart-summary-label">${i.svc.name} <span style="color:var(--text2);font-size:12px;">× ${i.qty}</span></span>
+      <span class="cart-summary-val">${i.variant.price * i.qty}₽</span>
+    </div>`).join('');
+
+  cont.innerHTML = `
+    <div class="cart-list">${itemsHtml}</div>
+    <div class="cart-summary">
+      <div style="font-size:12px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Состав заказа</div>
+      ${breakdownHtml}
+      <div class="cart-summary-row total">
+        <span class="cart-summary-label">Итого к оплате</span>
+        <span class="cart-summary-val">${total}₽</span>
+      </div>
+    </div>
+    <button class="cart-checkout-btn" onclick="checkoutCart()">Оплатить — ${total}₽ →</button>`;
+}
+
+function changeQty(variantId, delta) {
+  const item = cart.find(i => i.variant.id === variantId);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) {
+    cart = cart.filter(i => i.variant.id !== variantId);
+  }
+  updateCartBadge();
+  renderCart();
+}
+
+function checkoutCart() {
+  if (!cart.length) return;
+  const total = cartTotal();
+  document.getElementById('pay-select-sub').textContent =
+    cart.map(i => i.svc.name + ' ' + i.variant.dur).join(', ') + ' · ' + total + '₽';
+  // Store cart order data for bot
+  currentOrderId = Math.floor(10000 + Math.random() * 90000);
+  openModal('modal-pay-select');
+}
+
 renderCatalog();
 </script>
 </body>
