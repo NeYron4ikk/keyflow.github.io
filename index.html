@@ -117,41 +117,27 @@
   .section-title::after { content:''; flex:1; height:1px; background:var(--border); margin-left:8px; }
 
   /* SERVICE CARDS */
-  .services-grid { padding:0 16px; display:flex; flex-direction:column; gap:12px; }
+  .services-grid { padding: 0; }
+  .cat-section-grid { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
   .service-card {
-    background:var(--surface); border:1px solid var(--border);
-    border-radius:var(--radius); padding:18px; cursor:pointer;
-    transition:all 0.25s cubic-bezier(0.4,0,0.2,1);
-    animation:fadeIn 0.4s ease both;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+    animation: fadeIn 0.4s ease both;
   }
-  .service-card:nth-child(1){animation-delay:0.05s}
-  .service-card:nth-child(2){animation-delay:0.1s}
-  .service-card:nth-child(3){animation-delay:0.15s}
-  .service-card:nth-child(4){animation-delay:0.2s}
-  .service-card:nth-child(5){animation-delay:0.25s}
-  .service-card:nth-child(6){animation-delay:0.3s}
-  .service-card:active { transform:scale(0.98); }
-  .card-header { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
+  .service-card:active { transform: scale(0.98); }
+  .card-header { display: flex; align-items: center; gap: 14px; }
   .card-emoji {
-    width:52px; height:52px; border-radius:14px;
-    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    width: 50px; height: 50px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .card-emoji svg { display:block; }
-  .card-info { flex:1; }
-  .card-name { font-size:16px; font-weight:700; margin-bottom:3px; }
-  .card-desc { font-size:13px; color:var(--text2); line-height:1.4; }
-  .card-price { text-align:right; flex-shrink:0; }
-  .price-from { font-size:11px; color:var(--text2); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
-  .price-value { font-size:20px; font-weight:800; font-family:'Space Mono',monospace; color:var(--accent); }
-  .card-variants { display:flex; gap:8px; flex-wrap:wrap; }
-  .variant-chip {
-    background:var(--surface2); border:1px solid var(--border);
-    border-radius:20px; padding:6px 14px; font-size:13px; font-weight:600;
-    color:var(--text2); cursor:pointer; transition:all 0.2s;
-    display:flex; align-items:center; gap:6px;
-  }
-  .variant-chip:active, .variant-chip.selected { background:var(--accent); border-color:var(--accent); color:white; }
-  .variant-price { font-family:'Space Mono',monospace; font-size:12px; opacity:0.75; }
+  .card-emoji svg { display: block; }
+  .card-info { flex: 1; min-width: 0; }
+  .card-name { font-size: 15px; font-weight: 700; margin-bottom: 3px; color: var(--text); }
+  .card-desc { font-size: 12px; color: var(--text2); line-height: 1.4; }
+  .price-from { font-size: 10px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .price-value { font-size: 17px; font-weight: 800; font-family: 'Space Mono', monospace; color: var(--accent); }
+  .card-arrow { font-size: 20px; color: var(--text2); flex-shrink: 0; margin-left: 4px; }
 
   /* SERVICE LOGO COLORS */
   .color-spotify { background:#1DB954; }
@@ -554,6 +540,66 @@
   .cart-item-info { flex: 1; }
   .cart-item-dur { font-size: 12px; color: #aaaacc; margin-top: 2px; }
   .cart-item-price { font-family: 'Space Mono', monospace; font-size: 16px; font-weight: 800; color: var(--accent); }
+
+  /* CATALOG SECTIONS */
+  .cat-section { margin-bottom: 8px; }
+  .cat-section-title {
+    font-size: 12px; font-weight: 800; color: var(--text2);
+    text-transform: uppercase; letter-spacing: 1.2px;
+    padding: 0 12px; margin-bottom: 8px; margin-top: 18px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .cat-section-grid { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+
+  /* убираем отступ у самой первой секции */
+  .cat-section:first-child .cat-section-title { margin-top: 8px; }
+
+  /* LIVE FEED TICKER */
+  .live-feed {
+    margin: 14px 0 0;
+    overflow: hidden;
+    position: relative;
+    height: 32px;
+  }
+  .live-feed::before, .live-feed::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 32px; z-index: 2; pointer-events: none;
+  }
+  .live-feed::before { left: 0; background: linear-gradient(to right, var(--bg), transparent); }
+  .live-feed::after  { right: 0; background: linear-gradient(to left,  var(--bg), transparent); }
+
+  .feed-track {
+    display: flex; gap: 10px; align-items: center;
+    animation: feedScroll 28s linear infinite;
+    width: max-content;
+  }
+  .feed-track:hover { animation-play-state: paused; }
+
+  @keyframes feedScroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  .feed-item {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 12px 5px 7px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .feed-item-icon {
+    width: 20px; height: 20px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .feed-item-icon svg { width: 13px; height: 13px; display: block; }
+  .feed-item-icon img { width: 16px; height: 16px; object-fit: contain; }
+  .feed-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent3); flex-shrink: 0;
+    box-shadow: 0 0 6px rgba(67,233,123,0.8);
+    animation: pulse 2s infinite;
+  }
+  .feed-text { font-size: 12px; font-weight: 600; color: var(--text2); }
+  .feed-text b { color: var(--text); font-weight: 700; }
+  .feed-time { font-size: 11px; color: var(--text2); opacity: 0.6; }
 </style>
 </head>
 <body>
@@ -602,8 +648,13 @@
     </div>
   </div>
 
-  <div class="section-title">🔥 Популярное</div>
-  <div class="services-grid" id="services-grid"></div>
+
+  <!-- LIVE FEED -->
+  <div class="live-feed" id="live-feed">
+    <div class="feed-track" id="feed-track"></div>
+  </div>
+
+  <div class="services-grid" id="services-grid" style="padding:0;"></div>
 </div>
 
 
@@ -977,26 +1028,48 @@ function copyText(elemId) {
 // ══════════════════════════════════════════════
 // CATALOG RENDER
 // ══════════════════════════════════════════════
+function makeCard(svc) {
+  const minPrice = svc.custom ? null : Math.min(...svc.variants.map(v => v.price));
+  return `
+  <div class="service-card" data-id="${svc.id}" onclick="openProductModal(${svc.id})">
+    <div class="card-header">
+      <div class="card-emoji ${svc.colorClass}">${LOGOS[svc.logo]}</div>
+      <div class="card-info">
+        <div class="card-name">${svc.name}</div>
+        <div class="card-desc">${svc.desc}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+        ${minPrice ? `<div class="price-value">${minPrice}₽</div><div class="price-from">от</div>` : `<div class="price-from">любая</div>`}
+        <div class="card-arrow">›</div>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderCatalog(cat = 'all') {
   const grid = document.getElementById('services-grid');
-  const filtered = cat === 'all' ? SERVICES : SERVICES.filter(s => s.cat === cat);
 
-  grid.innerHTML = filtered.map(svc => {
-    const minPrice = svc.custom ? null : Math.min(...svc.variants.map(v => v.price));
+  if (cat !== 'all') {
+    const filtered = SERVICES.filter(s => s.cat === cat);
+    grid.innerHTML = filtered.map(makeCard).join('');
+    return;
+  }
+
+  // Группируем по категориям
+  const groups = [
+    { key: 'ai',    icon: '🤖', label: 'Искусственный интеллект' },
+    { key: 'music', icon: '🎵', label: 'Музыка' },
+    { key: 'games', icon: '🎮', label: 'Игры' },
+  ];
+
+  grid.innerHTML = groups.map(g => {
+    const items = SERVICES.filter(s => s.cat === g.key);
+    if (!items.length) return '';
     return `
-    <div class="service-card" data-id="${svc.id}" onclick="openProductModal(${svc.id})">
-      <div class="card-header">
-        <div class="card-emoji ${svc.colorClass}">${LOGOS[svc.logo]}</div>
-        <div class="card-info">
-          <div class="card-name">${svc.name}</div>
-          <div class="card-desc">${svc.desc}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
-          ${minPrice ? `<div class="price-value" style="font-family:'Space Mono',monospace;font-size:17px;font-weight:800;color:var(--accent)">${minPrice}₽</div><div class="price-from">от</div>` : `<div class="price-from">любая</div>`}
-          <div class="card-arrow">›</div>
-        </div>
-      </div>
-    </div>`;
+      <div class="cat-section">
+        <div class="cat-section-title">${g.icon} ${g.label}</div>
+        <div class="cat-section-grid">${items.map(makeCard).join('')}</div>
+      </div>`;
   }).join('');
 }
 
@@ -1541,6 +1614,47 @@ function checkoutCart() {
   openModal('modal-pay-select');
 }
 
+
+// ══════════════════════════════════════════════
+// LIVE FEED
+// ══════════════════════════════════════════════
+const FEED_DATA = [
+  { logo:'spotify',    colorClass:'color-spotify', name:'Spotify',        variant:'1 год',     user:'Алексей К.',  mins:2  },
+  { logo:'chatgpt',   colorClass:'color-chatgpt',  name:'ChatGPT Plus',   variant:'1 месяц',   user:'Мария Д.',    mins:5  },
+  { logo:'discord',   colorClass:'color-discord',  name:'Discord Nitro',  variant:'3 месяца',  user:'Никита В.',   mins:7  },
+  { logo:'roblox',    colorClass:'color-roblox',   name:'Roblox',         variant:'800 Robux', user:'Артём С.',    mins:11 },
+  { logo:'claude',    colorClass:'color-claude',   name:'Claude Pro',     variant:'1 месяц',   user:'Дарья М.',    mins:14 },
+  { logo:'steam',     colorClass:'color-steam',    name:'Steam',          variant:'500₽',      user:'Иван П.',     mins:18 },
+  { logo:'gemini',    colorClass:'color-gemini',   name:'Gemini Advanced',variant:'3 месяца',  user:'Ольга Н.',    mins:22 },
+  { logo:'spotify',   colorClass:'color-spotify',  name:'Spotify',        variant:'6 месяцев', user:'Сергей Л.',   mins:25 },
+  { logo:'sora',      colorClass:'color-sora',     name:'Sora',           variant:'1 месяц',   user:'Анна Б.',     mins:29 },
+  { logo:'discord',   colorClass:'color-discord',  name:'Discord Nitro',  variant:'1 год',     user:'Павел Ж.',    mins:33 },
+  { logo:'chatgpt',   colorClass:'color-chatgpt',  name:'ChatGPT Plus',   variant:'3 месяца',  user:'Екатерина Р.',mins:38 },
+  { logo:'roblox',    colorClass:'color-roblox',   name:'Roblox',         variant:'1700 Robux',user:'Тимур А.',    mins:41 },
+];
+
+function buildFeed() {
+  const track = document.getElementById('feed-track');
+  if (!track) return;
+
+  // Дублируем для бесшовного скролла
+  const items = [...FEED_DATA, ...FEED_DATA];
+
+  track.innerHTML = items.map(item => {
+    const t = item.mins < 60
+      ? item.mins + ' мин. назад'
+      : Math.floor(item.mins/60) + ' ч. назад';
+    return `
+    <div class="feed-item">
+      <div class="feed-dot"></div>
+      <div class="feed-item-icon ${item.colorClass}">${LOGOS[item.logo]}</div>
+      <span class="feed-text"><b>${item.user}</b> купил ${item.name} · ${item.variant}</span>
+      <span class="feed-time">${t}</span>
+    </div>`;
+  }).join('');
+}
+
+buildFeed();
 renderCatalog();
 </script>
 </body>
