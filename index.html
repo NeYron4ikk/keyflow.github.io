@@ -117,27 +117,41 @@
   .section-title::after { content:''; flex:1; height:1px; background:var(--border); margin-left:8px; }
 
   /* SERVICE CARDS */
-  .services-grid { padding: 0; }
-  .cat-section-grid { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+  .services-grid { padding:0 16px; display:flex; flex-direction:column; gap:12px; }
   .service-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 16px; cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
-    animation: fadeIn 0.4s ease both;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:18px; cursor:pointer;
+    transition:all 0.25s cubic-bezier(0.4,0,0.2,1);
+    animation:fadeIn 0.4s ease both;
   }
-  .service-card:active { transform: scale(0.98); }
-  .card-header { display: flex; align-items: center; gap: 14px; }
+  .service-card:nth-child(1){animation-delay:0.05s}
+  .service-card:nth-child(2){animation-delay:0.1s}
+  .service-card:nth-child(3){animation-delay:0.15s}
+  .service-card:nth-child(4){animation-delay:0.2s}
+  .service-card:nth-child(5){animation-delay:0.25s}
+  .service-card:nth-child(6){animation-delay:0.3s}
+  .service-card:active { transform:scale(0.98); }
+  .card-header { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
   .card-emoji {
-    width: 50px; height: 50px; border-radius: 14px;
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width:52px; height:52px; border-radius:14px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
   }
-  .card-emoji svg { display: block; }
-  .card-info { flex: 1; min-width: 0; }
-  .card-name { font-size: 15px; font-weight: 700; margin-bottom: 3px; color: var(--text); }
-  .card-desc { font-size: 12px; color: var(--text2); line-height: 1.4; }
-  .price-from { font-size: 10px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-  .price-value { font-size: 17px; font-weight: 800; font-family: 'Space Mono', monospace; color: var(--accent); }
-  .card-arrow { font-size: 20px; color: var(--text2); flex-shrink: 0; margin-left: 4px; }
+  .card-emoji svg { display:block; }
+  .card-info { flex:1; }
+  .card-name { font-size:16px; font-weight:700; margin-bottom:3px; }
+  .card-desc { font-size:13px; color:var(--text2); line-height:1.4; }
+  .card-price { text-align:right; flex-shrink:0; }
+  .price-from { font-size:11px; color:var(--text2); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+  .price-value { font-size:20px; font-weight:800; font-family:'Space Mono',monospace; color:var(--accent); }
+  .card-variants { display:flex; gap:8px; flex-wrap:wrap; }
+  .variant-chip {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:20px; padding:6px 14px; font-size:13px; font-weight:600;
+    color:var(--text2); cursor:pointer; transition:all 0.2s;
+    display:flex; align-items:center; gap:6px;
+  }
+  .variant-chip:active, .variant-chip.selected { background:var(--accent); border-color:var(--accent); color:white; }
+  .variant-price { font-family:'Space Mono',monospace; font-size:12px; opacity:0.75; }
 
   /* SERVICE LOGO COLORS */
   .color-spotify { background:#1DB954; }
@@ -541,68 +555,218 @@
   .cart-item-dur { font-size: 12px; color: #aaaacc; margin-top: 2px; }
   .cart-item-price { font-family: 'Space Mono', monospace; font-size: 16px; font-weight: 800; color: var(--accent); }
 
-  /* CATALOG SECTIONS */
-  .cat-section { margin-bottom: 8px; }
-  .cat-section-title {
-    font-size: 12px; font-weight: 800; color: var(--text2);
-    text-transform: uppercase; letter-spacing: 1.2px;
-    padding: 0 12px; margin-bottom: 8px; margin-top: 18px;
-    display: flex; align-items: center; gap: 6px;
+  /* ══ PROFILE PANEL ══ */
+  .profile-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    z-index: 300; opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
   }
-  .cat-section-grid { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
-
-  /* убираем отступ у самой первой секции */
-  .cat-section:first-child .cat-section-title { margin-top: 8px; }
-
-  /* LIVE FEED TICKER */
-  .live-feed {
-    margin: 14px 0 0;
-    overflow: hidden;
-    position: relative;
-    height: 32px;
+  .profile-overlay.open { opacity: 1; pointer-events: all; }
+  .profile-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 88%; max-width: 360px;
+    background: var(--surface); border-left: 1px solid var(--border);
+    z-index: 301; transform: translateX(110%);
+    transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+    overflow-y: auto; display: flex; flex-direction: column;
   }
-  .live-feed::before, .live-feed::after {
-    content: ''; position: absolute; top: 0; bottom: 0; width: 32px; z-index: 2; pointer-events: none;
-  }
-  .live-feed::before { left: 0; background: linear-gradient(to right, var(--bg), transparent); }
-  .live-feed::after  { right: 0; background: linear-gradient(to left,  var(--bg), transparent); }
+  .profile-overlay.open .profile-panel { transform: translateX(0); }
 
-  .feed-track {
-    display: flex; gap: 10px; align-items: center;
-    animation: feedScroll 28s linear infinite;
-    width: max-content;
+  .profile-header {
+    padding: 48px 20px 20px;
+    background: linear-gradient(135deg, #1a1a35 0%, #0f0f20 100%);
+    border-bottom: 1px solid var(--border);
   }
-  .feed-track:hover { animation-play-state: paused; }
-
-  @keyframes feedScroll {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
+  .profile-avatar {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 800; color: white;
+    margin-bottom: 12px; box-shadow: 0 4px 20px rgba(108,99,255,0.4);
+  }
+  .profile-name { font-size: 20px; font-weight: 800; color: var(--text); }
+  .profile-sub { font-size: 13px; color: var(--text2); margin-top: 3px; }
+  .profile-close {
+    position: absolute; top: 14px; right: 16px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text2); font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
   }
 
-  .feed-item {
-    display: flex; align-items: center; gap: 7px;
+  .profile-body { padding: 16px; flex: 1; }
+
+  .profile-section-title {
+    font-size: 11px; font-weight: 700; color: var(--text2);
+    text-transform: uppercase; letter-spacing: 1px;
+    margin: 16px 0 8px; padding: 0 4px;
+  }
+  .profile-menu-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 13px 14px; border-radius: 14px;
+    cursor: pointer; transition: background 0.2s;
+    margin-bottom: 4px;
+  }
+  .profile-menu-item:active { background: var(--surface2); }
+  .profile-menu-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .profile-menu-text { flex: 1; }
+  .profile-menu-label { font-size: 14px; font-weight: 700; color: var(--text); }
+  .profile-menu-desc { font-size: 12px; color: var(--text2); margin-top: 1px; }
+  .profile-menu-arrow { color: var(--text2); font-size: 18px; }
+
+  .profile-divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+  /* Admin section */
+  .admin-section { display: none; }
+  .admin-section.visible { display: block; }
+
+  .admin-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,101,132,0.15); border: 1px solid rgba(255,101,132,0.3);
+    border-radius: 20px; padding: 3px 10px;
+    font-size: 11px; font-weight: 700; color: var(--accent2);
+    margin-top: 6px;
+  }
+
+  /* Admin PIN modal */
+  .pin-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    z-index: 400; display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .pin-overlay.open { opacity: 1; pointer-events: all; }
+  .pin-box {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 20px; padding: 5px 12px 5px 7px;
-    white-space: nowrap; flex-shrink: 0;
+    border-radius: 24px; padding: 32px 28px; width: 90%; max-width: 340px;
+    transform: scale(0.9); transition: transform 0.3s;
   }
-  .feed-item-icon {
-    width: 20px; height: 20px; border-radius: 6px;
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  .pin-overlay.open .pin-box { transform: scale(1); }
+  .pin-title { font-size: 20px; font-weight: 800; margin-bottom: 6px; color: var(--text); }
+  .pin-sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+  .pin-input {
+    width: 100%; background: var(--surface2); border: 2px solid var(--border);
+    border-radius: 14px; padding: 14px 16px;
+    font-family: 'Space Mono', monospace; font-size: 16px;
+    color: var(--text); outline: none; transition: border-color 0.2s;
+    margin-bottom: 12px;
   }
-  .feed-item-icon svg { width: 13px; height: 13px; display: block; }
-  .feed-item-icon img { width: 16px; height: 16px; object-fit: contain; }
-  .feed-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--accent3); flex-shrink: 0;
-    box-shadow: 0 0 6px rgba(67,233,123,0.8);
-    animation: pulse 2s infinite;
+  .pin-input:focus { border-color: var(--accent); }
+  .pin-input.error { border-color: var(--accent2); animation: shake 0.3s; }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)}
   }
-  .feed-text { font-size: 12px; font-weight: 600; color: var(--text2); }
-  .feed-text b { color: var(--text); font-weight: 700; }
-  .feed-time { font-size: 11px; color: var(--text2); opacity: 0.6; }
+  .pin-btn {
+    width: 100%; background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    border: none; border-radius: 14px; padding: 14px;
+    font-family: 'Manrope', sans-serif; font-size: 15px; font-weight: 700;
+    color: white; cursor: pointer; transition: all 0.2s; margin-bottom: 8px;
+  }
+  .pin-btn:active { transform: scale(0.98); }
+  .pin-cancel {
+    width: 100%; background: transparent; border: 1px solid var(--border);
+    border-radius: 14px; padding: 12px;
+    font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 600;
+    color: var(--text2); cursor: pointer;
+  }
+
+  /* Admin stats cards */
+  .admin-stats-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;
+  }
+  .admin-stat-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px 12px;
+  }
+  .admin-stat-num {
+    font-size: 20px; font-weight: 800;
+    font-family: 'Space Mono', monospace; color: var(--accent);
+  }
+  .admin-stat-label { font-size: 11px; color: var(--text2); margin-top: 3px; font-weight: 600; }
+
+  /* Admin action items */
+  .admin-action {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 14px; border-radius: 14px;
+    cursor: pointer; transition: background 0.2s;
+    margin-bottom: 4px; border: none; width: 100%;
+    background: transparent; text-align: left;
+  }
+  .admin-action:active { background: var(--surface2); }
+  .admin-action-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .admin-action-label { font-size: 14px; font-weight: 700; color: var(--text); flex: 1; }
+  .admin-action-arrow { color: var(--text2); }
+
+  /* Sub-panel for admin actions */
+  .admin-sub-panel {
+    padding: 0 4px;
+  }
+  .admin-sub-title {
+    font-size: 16px; font-weight: 800; color: var(--text);
+    display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+    cursor: pointer;
+  }
+  .admin-sub-title span { font-size: 20px; }
+  .admin-input {
+    width: 100%; background: var(--surface2); border: 2px solid var(--border);
+    border-radius: 12px; padding: 12px 14px;
+    font-family: 'Manrope', sans-serif; font-size: 14px;
+    color: var(--text); outline: none; transition: border-color 0.2s;
+    margin-bottom: 10px;
+  }
+  .admin-input:focus { border-color: var(--accent); }
+  .admin-input::placeholder { color: var(--text2); }
+  .admin-btn {
+    width: 100%; background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    border: none; border-radius: 12px; padding: 13px;
+    font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 700;
+    color: white; cursor: pointer; transition: all 0.2s; margin-bottom: 8px;
+  }
+  .admin-btn:active { transform: scale(0.98); }
+  .admin-btn.danger {
+    background: linear-gradient(135deg, #ff6584, #e0003d);
+  }
+  .admin-btn.success {
+    background: linear-gradient(135deg, #43e97b, #38f9d7);
+    color: #0a0a0f;
+  }
+
+  .user-badge { cursor: pointer; }
+  .user-badge:active { opacity: 0.7; }
 </style>
 </head>
 <body>
+
+<!-- ══════════════ PIN MODAL ══════════════ -->
+<div class="pin-overlay" id="pin-overlay">
+  <div class="pin-box">
+    <div class="pin-title">🔐 Вход в админку</div>
+    <div class="pin-sub">Введи секретный код доступа</div>
+    <input class="pin-input" id="pin-input" type="password" placeholder="Секретный код..." autocomplete="off">
+    <button class="pin-btn" onclick="checkPin()">Войти</button>
+    <button class="pin-cancel" onclick="closePinModal()">Отмена</button>
+  </div>
+</div>
+
+<!-- ══════════════ PROFILE PANEL ══════════════ -->
+<div class="profile-overlay" id="profile-overlay" onclick="handleProfileOverlayClick(event)">
+  <div class="profile-panel" id="profile-panel">
+    <div class="profile-header">
+      <button class="profile-close" onclick="closeProfile()">✕</button>
+      <div class="profile-avatar" id="profile-avatar">👤</div>
+      <div class="profile-name" id="profile-name">Гость</div>
+      <div class="profile-sub" id="profile-sub">Telegram пользователь</div>
+      <div class="admin-badge" id="admin-badge" style="display:none">👑 Администратор</div>
+    </div>
+    <div class="profile-body" id="profile-body"></div>
+  </div>
+</div>
 
 <!-- ══════════════ CATALOG PAGE ══════════════ -->
 <div id="page-catalog" class="page">
@@ -648,13 +812,8 @@
     </div>
   </div>
 
-
-  <!-- LIVE FEED -->
-  <div class="live-feed" id="live-feed">
-    <div class="feed-track" id="feed-track"></div>
-  </div>
-
-  <div class="services-grid" id="services-grid" style="padding:0;"></div>
+  <div class="section-title">🔥 Популярное</div>
+  <div class="services-grid" id="services-grid"></div>
 </div>
 
 
@@ -1028,48 +1187,26 @@ function copyText(elemId) {
 // ══════════════════════════════════════════════
 // CATALOG RENDER
 // ══════════════════════════════════════════════
-function makeCard(svc) {
-  const minPrice = svc.custom ? null : Math.min(...svc.variants.map(v => v.price));
-  return `
-  <div class="service-card" data-id="${svc.id}" onclick="openProductModal(${svc.id})">
-    <div class="card-header">
-      <div class="card-emoji ${svc.colorClass}">${LOGOS[svc.logo]}</div>
-      <div class="card-info">
-        <div class="card-name">${svc.name}</div>
-        <div class="card-desc">${svc.desc}</div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
-        ${minPrice ? `<div class="price-value">${minPrice}₽</div><div class="price-from">от</div>` : `<div class="price-from">любая</div>`}
-        <div class="card-arrow">›</div>
-      </div>
-    </div>
-  </div>`;
-}
-
 function renderCatalog(cat = 'all') {
   const grid = document.getElementById('services-grid');
+  const filtered = cat === 'all' ? SERVICES : SERVICES.filter(s => s.cat === cat);
 
-  if (cat !== 'all') {
-    const filtered = SERVICES.filter(s => s.cat === cat);
-    grid.innerHTML = filtered.map(makeCard).join('');
-    return;
-  }
-
-  // Группируем по категориям
-  const groups = [
-    { key: 'ai',    icon: '🤖', label: 'Искусственный интеллект' },
-    { key: 'music', icon: '🎵', label: 'Музыка' },
-    { key: 'games', icon: '🎮', label: 'Игры' },
-  ];
-
-  grid.innerHTML = groups.map(g => {
-    const items = SERVICES.filter(s => s.cat === g.key);
-    if (!items.length) return '';
+  grid.innerHTML = filtered.map(svc => {
+    const minPrice = svc.custom ? null : Math.min(...svc.variants.map(v => v.price));
     return `
-      <div class="cat-section">
-        <div class="cat-section-title">${g.icon} ${g.label}</div>
-        <div class="cat-section-grid">${items.map(makeCard).join('')}</div>
-      </div>`;
+    <div class="service-card" data-id="${svc.id}" onclick="openProductModal(${svc.id})">
+      <div class="card-header">
+        <div class="card-emoji ${svc.colorClass}">${LOGOS[svc.logo]}</div>
+        <div class="card-info">
+          <div class="card-name">${svc.name}</div>
+          <div class="card-desc">${svc.desc}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+          ${minPrice ? `<div class="price-value" style="font-family:'Space Mono',monospace;font-size:17px;font-weight:800;color:var(--accent)">${minPrice}₽</div><div class="price-from">от</div>` : `<div class="price-from">любая</div>`}
+          <div class="card-arrow">›</div>
+        </div>
+      </div>
+    </div>`;
   }).join('');
 }
 
@@ -1614,48 +1751,301 @@ function checkoutCart() {
   openModal('modal-pay-select');
 }
 
+renderCatalog();
 
 // ══════════════════════════════════════════════
-// LIVE FEED
+// PROFILE & ADMIN PANEL
 // ══════════════════════════════════════════════
-const FEED_DATA = [
-  { logo:'spotify',    colorClass:'color-spotify', name:'Spotify',        variant:'1 год',     user:'Алексей К.',  mins:2  },
-  { logo:'chatgpt',   colorClass:'color-chatgpt',  name:'ChatGPT Plus',   variant:'1 месяц',   user:'Мария Д.',    mins:5  },
-  { logo:'discord',   colorClass:'color-discord',  name:'Discord Nitro',  variant:'3 месяца',  user:'Никита В.',   mins:7  },
-  { logo:'roblox',    colorClass:'color-roblox',   name:'Roblox',         variant:'800 Robux', user:'Артём С.',    mins:11 },
-  { logo:'claude',    colorClass:'color-claude',   name:'Claude Pro',     variant:'1 месяц',   user:'Дарья М.',    mins:14 },
-  { logo:'steam',     colorClass:'color-steam',    name:'Steam',          variant:'500₽',      user:'Иван П.',     mins:18 },
-  { logo:'gemini',    colorClass:'color-gemini',   name:'Gemini Advanced',variant:'3 месяца',  user:'Ольга Н.',    mins:22 },
-  { logo:'spotify',   colorClass:'color-spotify',  name:'Spotify',        variant:'6 месяцев', user:'Сергей Л.',   mins:25 },
-  { logo:'sora',      colorClass:'color-sora',     name:'Sora',           variant:'1 месяц',   user:'Анна Б.',     mins:29 },
-  { logo:'discord',   colorClass:'color-discord',  name:'Discord Nitro',  variant:'1 год',     user:'Павел Ж.',    mins:33 },
-  { logo:'chatgpt',   colorClass:'color-chatgpt',  name:'ChatGPT Plus',   variant:'3 месяца',  user:'Екатерина Р.',mins:38 },
-  { logo:'roblox',    colorClass:'color-roblox',   name:'Roblox',         variant:'1700 Robux',user:'Тимур А.',    mins:41 },
-];
 
-function buildFeed() {
-  const track = document.getElementById('feed-track');
-  if (!track) return;
+const ADMIN_PASSWORD = 'sexypinguinTerminator123';
+let isAdmin = false;
 
-  // Дублируем для бесшовного скролла
-  const items = [...FEED_DATA, ...FEED_DATA];
+// Открыть профиль по клику на бейдж
+document.getElementById('user-badge').addEventListener('click', openProfile);
 
-  track.innerHTML = items.map(item => {
-    const t = item.mins < 60
-      ? item.mins + ' мин. назад'
-      : Math.floor(item.mins/60) + ' ч. назад';
-    return `
-    <div class="feed-item">
-      <div class="feed-dot"></div>
-      <div class="feed-item-icon ${item.colorClass}">${LOGOS[item.logo]}</div>
-      <span class="feed-text"><b>${item.user}</b> купил ${item.name} · ${item.variant}</span>
-      <span class="feed-time">${t}</span>
-    </div>`;
-  }).join('');
+function openProfile() {
+  renderProfileMain();
+  document.getElementById('profile-overlay').classList.add('open');
 }
 
-buildFeed();
-renderCatalog();
+function closeProfile() {
+  document.getElementById('profile-overlay').classList.remove('open');
+}
+
+function handleProfileOverlayClick(e) {
+  if (e.target === document.getElementById('profile-overlay')) closeProfile();
+}
+
+function renderProfileMain() {
+  const user = tg?.initDataUnsafe?.user;
+  const name = user ? user.first_name + (user.last_name ? ' ' + user.last_name : '') : 'Гость';
+  const username = user?.username ? '@' + user.username : 'Без ника';
+
+  // Avatar initials
+  const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('profile-avatar').textContent = initials || '👤';
+  document.getElementById('profile-name').textContent = name;
+  document.getElementById('profile-sub').textContent = username;
+  document.getElementById('admin-badge').style.display = isAdmin ? 'inline-flex' : 'none';
+
+  const adminHtml = isAdmin ? `
+    <div class="profile-divider"></div>
+    <div class="profile-section-title">⚙️ Управление</div>
+    <div class="profile-menu-item" onclick="renderAdminStats()">
+      <div class="profile-menu-icon" style="background:rgba(108,99,255,0.15)">📊</div>
+      <div class="profile-menu-text">
+        <div class="profile-menu-label">Статистика</div>
+        <div class="profile-menu-desc">Выручка, заказы, пользователи</div>
+      </div>
+      <div class="profile-menu-arrow">›</div>
+    </div>
+    <div class="profile-menu-item" onclick="renderAdminOrders()">
+      <div class="profile-menu-icon" style="background:rgba(67,233,123,0.15)">📦</div>
+      <div class="profile-menu-text">
+        <div class="profile-menu-label">Активные заказы</div>
+        <div class="profile-menu-desc">Ждут обработки</div>
+      </div>
+      <div class="profile-menu-arrow">›</div>
+    </div>
+    <div class="profile-menu-item" onclick="renderAdminPromo()">
+      <div class="profile-menu-icon" style="background:rgba(255,193,7,0.15)">🎟</div>
+      <div class="profile-menu-text">
+        <div class="profile-menu-label">Промокоды</div>
+        <div class="profile-menu-desc">Создать, управлять скидками</div>
+      </div>
+      <div class="profile-menu-arrow">›</div>
+    </div>
+    <div class="profile-menu-item" onclick="renderAdminWithdraw()">
+      <div class="profile-menu-icon" style="background:rgba(255,101,132,0.15)">💸</div>
+      <div class="profile-menu-text">
+        <div class="profile-menu-label">Вывод средств</div>
+        <div class="profile-menu-desc">Баланс и история выводов</div>
+      </div>
+      <div class="profile-menu-arrow">›</div>
+    </div>
+    <div class="profile-menu-item" onclick="renderAdminBroadcast()">
+      <div class="profile-menu-icon" style="background:rgba(108,99,255,0.15)">📢</div>
+      <div class="profile-menu-text">
+        <div class="profile-menu-label">Рассылка</div>
+        <div class="profile-menu-desc">Сообщение всем пользователям</div>
+      </div>
+      <div class="profile-menu-arrow">›</div>
+    </div>
+  ` : ``;
+
+  document.getElementById('profile-body').innerHTML = `
+    <div class="profile-section-title">Личный кабинет</div>
+    <div class="profile-menu-item" onclick="closeProfile(); showPage('orders');">
+      <div class="profile-menu-icon" style="background:rgba(67,233,123,0.15)">📋</div>
+      <div class="profile-menu-text">
+        <div class="profile-menu-label">Мои заказы</div>
+        <div class="profile-menu-desc">История покупок</div>
+      </div>
+      <div class="profile-menu-arrow">›</div>
+    </div>
+    <div class="profile-menu-item" onclick="copyRefLink()">
+      <div class="profile-menu-icon" style="background:rgba(255,193,7,0.15)">🎁</div>
+      <div class="profile-menu-text">
+        <div class="profile-menu-label">Реферальная ссылка</div>
+        <div class="profile-menu-desc">Приведи друга — получи бонус</div>
+      </div>
+      <div class="profile-menu-arrow">›</div>
+    </div>
+    ${adminHtml}
+  `;
+}
+
+// Скрытый вход — 5 кликов по логотипу
+let logoClickCount = 0;
+let logoClickTimer = null;
+document.querySelector('.logo-icon').addEventListener('click', () => {
+  logoClickCount++;
+  clearTimeout(logoClickTimer);
+  logoClickTimer = setTimeout(() => { logoClickCount = 0; }, 2000);
+  if (logoClickCount >= 5) {
+    logoClickCount = 0;
+    openProfile();
+    setTimeout(openPinModal, 400);
+  }
+});
+
+function copyRefLink() {
+  const user = tg?.initDataUnsafe?.user;
+  const link = user ? `https://t.me/Keyfloww_bot?start=ref_${user.id}` : 'Недоступно';
+  navigator.clipboard?.writeText(link).catch(() => {});
+  showToast('🔗 Реферальная ссылка скопирована!');
+}
+
+// ── PIN MODAL ──────────────────────────────────
+function openPinModal() {
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-input').classList.remove('error');
+  document.getElementById('pin-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('pin-input').focus(), 300);
+}
+
+function closePinModal() {
+  document.getElementById('pin-overlay').classList.remove('open');
+}
+
+document.getElementById('pin-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') checkPin();
+});
+
+function checkPin() {
+  const val = document.getElementById('pin-input').value;
+  if (val === ADMIN_PASSWORD) {
+    isAdmin = true;
+    closePinModal();
+    renderProfileMain();
+    showToast('👑 Добро пожаловать, администратор!');
+  } else {
+    const inp = document.getElementById('pin-input');
+    inp.classList.add('error');
+    inp.value = '';
+    setTimeout(() => inp.classList.remove('error'), 500);
+  }
+}
+
+// ── ADMIN SCREENS ──────────────────────────────
+
+function adminBack() { renderProfileMain(); }
+
+function renderAdminStats() {
+  document.getElementById('profile-body').innerHTML = `
+    <div class="admin-sub-panel">
+      <div class="admin-sub-title" onclick="adminBack()">
+        <span>‹</span> Статистика
+      </div>
+      <div class="admin-stats-grid">
+        <div class="admin-stat-card">
+          <div class="admin-stat-num" id="as-revenue">—</div>
+          <div class="admin-stat-label">💰 Выручка всего</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-num" id="as-today">—</div>
+          <div class="admin-stat-label">📅 Сегодня</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-num" id="as-orders">—</div>
+          <div class="admin-stat-label">📦 Заказов</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-num" id="as-users">—</div>
+          <div class="admin-stat-label">👥 Пользователей</div>
+        </div>
+      </div>
+      <div style="padding:16px;background:var(--surface2);border-radius:14px;border:1px solid var(--border);text-align:center;color:var(--text2);font-size:13px;line-height:1.6;">
+        📊 Статистика загружается из бота.<br>Используй <b>/admin</b> в Telegram для полной аналитики.
+      </div>
+    </div>`;
+  // Запрашиваем статистику через Telegram WebApp
+  tg?.sendData && tg.sendData(JSON.stringify({ action: 'get_stats' }));
+}
+
+function renderAdminOrders() {
+  document.getElementById('profile-body').innerHTML = `
+    <div class="admin-sub-panel">
+      <div class="admin-sub-title" onclick="adminBack()">
+        <span>‹</span> Активные заказы
+      </div>
+      <div style="padding:20px;background:var(--surface2);border-radius:14px;border:1px solid var(--border);text-align:center;">
+        <div style="font-size:36px;margin-bottom:10px;">📦</div>
+        <div style="color:var(--text);font-weight:700;margin-bottom:6px;">Управление заказами</div>
+        <div style="color:var(--text2);font-size:13px;line-height:1.6;">Подтверждение оплаты и выдача подписок происходит через бота в Telegram. Получай уведомление → нажимай ✅ Подтвердить.</div>
+      </div>
+    </div>`;
+}
+
+function renderAdminPromo() {
+  document.getElementById('profile-body').innerHTML = `
+    <div class="admin-sub-panel">
+      <div class="admin-sub-title" onclick="adminBack()">
+        <span>‹</span> Промокоды
+      </div>
+      <div style="color:var(--text2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Создать промокод</div>
+      <input class="admin-input" id="promo-code" placeholder="Код (напр. SUMMER25)" style="text-transform:uppercase">
+      <input class="admin-input" id="promo-discount" placeholder="Скидка (напр. 10% или 200₽)">
+      <input class="admin-input" id="promo-limit" placeholder="Лимит использований (напр. 50)">
+      <button class="admin-btn" onclick="createPromo()">✨ Создать промокод</button>
+      <div class="profile-divider"></div>
+      <div style="color:var(--text2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Активные промокоды</div>
+      <div id="promo-list" style="color:var(--text2);font-size:13px;padding:12px;background:var(--surface2);border-radius:12px;border:1px solid var(--border);text-align:center;">
+        Промокоды будут отображаться здесь
+      </div>
+    </div>`;
+  document.getElementById('promo-code').addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+  });
+}
+
+function createPromo() {
+  const code = document.getElementById('promo-code').value.trim();
+  const discount = document.getElementById('promo-discount').value.trim();
+  const limit = document.getElementById('promo-limit').value.trim();
+  if (!code || !discount) { showToast('⚠️ Заполни код и скидку'); return; }
+  // Отправляем в бот
+  tg?.sendData && tg.sendData(JSON.stringify({ action: 'create_promo', code, discount, limit: limit || 'unlimited' }));
+  showToast(`✅ Промокод ${code} создан!`);
+  document.getElementById('promo-code').value = '';
+  document.getElementById('promo-discount').value = '';
+  document.getElementById('promo-limit').value = '';
+}
+
+function renderAdminWithdraw() {
+  document.getElementById('profile-body').innerHTML = `
+    <div class="admin-sub-panel">
+      <div class="admin-sub-title" onclick="adminBack()">
+        <span>‹</span> Вывод средств
+      </div>
+      <div class="admin-stats-grid" style="margin-bottom:16px;">
+        <div class="admin-stat-card" style="grid-column:1/-1;">
+          <div class="admin-stat-num" style="color:var(--accent3)">— ₽</div>
+          <div class="admin-stat-label">💰 Доступно к выводу</div>
+        </div>
+      </div>
+      <div style="color:var(--text2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Запрос на вывод</div>
+      <input class="admin-input" id="withdraw-amount" placeholder="Сумма (₽)" type="number">
+      <input class="admin-input" id="withdraw-details" placeholder="Реквизиты (карта / СБП)">
+      <button class="admin-btn success" onclick="requestWithdraw()">💸 Запросить вывод</button>
+      <div style="margin-top:12px;padding:12px;background:rgba(67,233,123,0.08);border:1px solid rgba(67,233,123,0.2);border-radius:12px;font-size:12px;color:var(--text2);line-height:1.6;">
+        ℹ️ Запрос фиксируется в системе и уведомление приходит в бот. Баланс пересчитывается автоматически.
+      </div>
+    </div>`;
+}
+
+function requestWithdraw() {
+  const amount = document.getElementById('withdraw-amount').value.trim();
+  const details = document.getElementById('withdraw-details').value.trim();
+  if (!amount || !details) { showToast('⚠️ Заполни сумму и реквизиты'); return; }
+  tg?.sendData && tg.sendData(JSON.stringify({ action: 'withdraw_request', amount, details }));
+  showToast(`💸 Запрос на вывод ${amount}₽ отправлен!`);
+  document.getElementById('withdraw-amount').value = '';
+  document.getElementById('withdraw-details').value = '';
+}
+
+function renderAdminBroadcast() {
+  document.getElementById('profile-body').innerHTML = `
+    <div class="admin-sub-panel">
+      <div class="admin-sub-title" onclick="adminBack()">
+        <span>‹</span> Рассылка
+      </div>
+      <textarea class="admin-input" id="broadcast-text" placeholder="Текст сообщения для всех пользователей..." style="height:120px;resize:none;"></textarea>
+      <button class="admin-btn" onclick="sendBroadcast()">📢 Отправить всем</button>
+      <div style="margin-top:8px;padding:12px;background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.2);border-radius:12px;font-size:12px;color:var(--text2);line-height:1.6;">
+        ⚠️ Сообщение получат все пользователи бота. Используй с умом.
+      </div>
+    </div>`;
+}
+
+function sendBroadcast() {
+  const text = document.getElementById('broadcast-text').value.trim();
+  if (!text) { showToast('⚠️ Введи текст рассылки'); return; }
+  if (!confirm('Отправить рассылку всем пользователям?')) return;
+  tg?.sendData && tg.sendData(JSON.stringify({ action: 'broadcast', text }));
+  showToast('📢 Рассылка запущена!');
+  document.getElementById('broadcast-text').value = '';
+}
 </script>
 </body>
 </html>
