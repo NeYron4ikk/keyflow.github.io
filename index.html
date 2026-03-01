@@ -752,6 +752,49 @@
     gap: 8px !important;
   }
 
+
+  /* PROMO CODE */
+  .promo-row {
+    display: flex; gap: 8px; margin: 12px 0 4px;
+  }
+  .promo-input {
+    flex: 1; background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 10px 14px; color: var(--text);
+    font-size: 13px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; outline: none; transition: border-color .2s;
+  }
+  .promo-input::placeholder { color: var(--text2); text-transform: none; font-weight: 400; letter-spacing: 0; }
+  .promo-input:focus { border-color: var(--accent); }
+  .promo-apply-btn {
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 10px 14px; color: var(--accent);
+    font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+    transition: background .15s, border-color .15s;
+  }
+  .promo-apply-btn:active { background: var(--surface); }
+  .promo-status {
+    font-size: 12px; font-weight: 600; min-height: 18px;
+    padding: 0 2px; transition: color .2s;
+  }
+  .promo-status.ok { color: #43e97b; }
+  .promo-status.err { color: #ff6b6b; }
+  .promo-discount-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(67,233,123,0.12); border: 1px solid rgba(67,233,123,0.3);
+    border-radius: 8px; padding: 4px 10px; font-size: 12px;
+    font-weight: 700; color: #43e97b; margin-bottom: 4px;
+  }
+  /* admin promo table */
+  .promo-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .promo-table th { color: var(--text2); font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.5px; padding: 0 0 8px; text-align: left; }
+  .promo-table td { padding: 8px 0; border-top: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  .promo-del-btn { background: rgba(255,107,107,0.12); border: none; border-radius: 6px;
+    color: #ff6b6b; font-size: 11px; font-weight: 700; padding: 4px 8px; cursor: pointer; }
+  .promo-tag { display: inline-block; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 3px 8px; font-family: 'Space Mono', monospace;
+    font-size: 12px; font-weight: 700; color: var(--accent); }
+
 </style>
 </head>
 <body>
@@ -1042,6 +1085,19 @@
       После подтверждения тебе придёт реквизиты для оплаты. Выдача подписки — в течение 15 минут после поступления средств.
     </div>
 
+
+    <div style="margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Промокод</div>
+      <div class="promo-row">
+        <input class="promo-input" id="promo-field" placeholder="Введи промокод" maxlength="24" autocomplete="off">
+        <button class="promo-apply-btn" onclick="applyPromoCode()">Применить</button>
+      </div>
+      <div class="promo-status" id="promo-status"></div>
+      <div id="promo-discount-badge" style="display:none;margin-top:6px;" class="promo-discount-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58s1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41s-.22-1.05-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>
+        <span id="promo-badge-text">Скидка применена</span>
+      </div>
+    </div>
     <button class="btn-primary" id="confirm-pay-btn">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
       Перейти к оплате
@@ -1444,25 +1500,34 @@ document.getElementById('btn-order').addEventListener('click', () => {
 // ПОДТВЕРЖДЕНИЕ ЗАКАЗА
 // ══════════════════════════════════════════════
 function showConfirmModal(svc, variant) {
+  currentFinalPrice = variant.price;
+  resetPromo();
+
   const details = document.getElementById('confirm-details');
-  const rows = [
-    { label: 'Сервис', value: svc.name },
-    { label: 'Период', value: variant.dur },
-    { label: 'Сумма', value: variant.price + '₽' },
-  ];
-  details.innerHTML = rows.map(r => `
+  details.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;">
-      <span style="color:var(--text2);font-weight:600">${r.label}</span>
-      <span style="font-weight:700;color:var(--text)">${r.value}</span>
+      <span style="color:var(--text2);font-weight:600">Сервис</span>
+      <span style="font-weight:700;color:var(--text)">${svc.name}</span>
     </div>
-  `).join('<div style="height:1px;background:var(--border);margin:2px 0"></div>');
+    <div style="height:1px;background:var(--border);margin:2px 0"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;">
+      <span style="color:var(--text2);font-weight:600">Период</span>
+      <span style="font-weight:700;color:var(--text)">${variant.dur}</span>
+    </div>
+    <div style="height:1px;background:var(--border);margin:2px 0"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;">
+      <span style="color:var(--text2);font-weight:600">Сумма</span>
+      <span class="confirm-amount" data-orig="${variant.price}" style="font-weight:800;color:var(--accent);font-family:'Space Mono',monospace;">${variant.price}₽</span>
+    </div>
+  `;
 
   document.getElementById('confirm-desc').textContent = `${svc.name} · ${variant.dur} · ${variant.price}₽`;
 
   document.getElementById('confirm-pay-btn').onclick = () => {
+    const finalPrice = currentFinalPrice || variant.price;
     closeModal('modal-confirm');
     document.getElementById('pay-select-sub').textContent =
-      `${svc.name} — ${variant.dur} · ${variant.price}₽`;
+      `${svc.name} — ${variant.dur} · ${finalPrice}₽`;
     openModal('modal-pay-select');
   };
 
@@ -1483,7 +1548,8 @@ document.getElementById('pay-sbp-btn').addEventListener('click', () => {
   // Генерируем номер заказа
   currentOrderId = Math.floor(10000 + Math.random() * 90000);
 
-  document.getElementById('sbp-amount').textContent = selectedVariant.price + '₽';
+  const finalPrice = currentFinalPrice || selectedVariant.price;
+  document.getElementById('sbp-amount').textContent = finalPrice + '₽';
   document.getElementById('sbp-phone').textContent = CONFIG.SBP_PHONE;
   document.getElementById('sbp-bank').textContent = CONFIG.SBP_BANK;
   document.getElementById('sbp-recipient').textContent = CONFIG.SBP_RECIPIENT;
@@ -1544,10 +1610,11 @@ document.getElementById('pay-crypto-btn').addEventListener('click', () => {
   closeModal('modal-pay-select');
 
   currentOrderId = Math.floor(10000 + Math.random() * 90000);
-  const usdt = (selectedVariant.price / CONFIG.USDT_RATE).toFixed(2);
+  const fp = currentFinalPrice || selectedVariant.price;
+  const usdt = (fp / CONFIG.USDT_RATE).toFixed(2);
 
   document.getElementById('crypto-amount-usdt').textContent = usdt + ' USDT';
-  document.getElementById('crypto-amount-rub').textContent = '≈ ' + selectedVariant.price + '₽';
+  document.getElementById('crypto-amount-rub').textContent = '≈ ' + fp + '₽';
 
   openModal('modal-crypto');
   sendOrderToBot('crypto');
@@ -1608,6 +1675,9 @@ document.getElementById('card-pay-btn').addEventListener('click', () => {
 // TELEGRAM COMMUNICATION
 // ══════════════════════════════════════════════
 function sendOrderToBot(payMethod) {
+  const finalPrice = currentFinalPrice || (selectedVariant ? selectedVariant.price : 0);
+  const promoCode  = activePromo ? activePromo.code : null;
+
   // If cart checkout
   if (cart.length && !selectedVariant) {
     const data = JSON.stringify({
@@ -1616,8 +1686,14 @@ function sendOrderToBot(payMethod) {
       total: cartTotal(),
       payment: payMethod,
       order_id: currentOrderId,
+      promo_code: promoCode,
     });
     if (tg) tg.sendData(data);
+    // Засчитываем использование промокода
+    if (activePromo && PROMOS[activePromo.code]) {
+      PROMOS[activePromo.code].used = (PROMOS[activePromo.code].used || 0) + 1;
+      savePromos();
+    }
     return;
   }
   const data = JSON.stringify({
@@ -1626,11 +1702,18 @@ function sendOrderToBot(payMethod) {
     variant_id: selectedVariant.id,
     service_name: selectedService.name,
     variant_dur: selectedVariant.dur,
-    amount: selectedVariant.price,
+    amount: finalPrice,
+    orig_amount: selectedVariant.price,
     payment: payMethod,
     order_id: currentOrderId,
+    promo_code: promoCode,
   });
   if (tg) tg.sendData(data);
+  // Засчитываем использование промокода
+  if (activePromo && PROMOS[activePromo.code]) {
+    PROMOS[activePromo.code].used = (PROMOS[activePromo.code].used || 0) + 1;
+    savePromos();
+  }
 }
 
 function notifyBot(action, orderId) {
@@ -1917,11 +2000,19 @@ function renderProfileMain() {
       </div>
       <div class="profile-menu-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg></div>
     </div>
+    <div class="profile-menu-item" onclick="renderAdminPrices()">
+      <div class="profile-menu-icon" style="background:rgba(251,191,36,0.15)"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg></div>
+      <div class="profile-menu-text">
+        <div class="profile-menu-label">Цены и скидки</div>
+        <div class="profile-menu-desc">Изменить цены, глобальная скидка</div>
+      </div>
+      <div class="profile-menu-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg></div>
+    </div>
     <div class="profile-menu-item" onclick="renderAdminPromo()">
       <div class="profile-menu-icon" style="background:rgba(255,193,7,0.15)"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22 10V6c0-1.11-.9-2-2-2H4c-1.1 0-1.99.89-1.99 2v4c1.1 0 1.99.9 1.99 2s-.89 2-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-4c-1.1 0-2-.9-2-2s.9-2 2-2zm-2-1.46c-1.19.69-2 1.99-2 3.46s.81 2.77 2 3.46V18H4v-2.54c1.19-.69 2-1.99 2-3.46 0-1.48-.8-2.77-2-3.46V6h16v2.54zM11 15h2v2h-2zm0-4h2v2h-2zm0-4h2v2h-2z"/></svg></div>
       <div class="profile-menu-text">
         <div class="profile-menu-label">Промокоды</div>
-        <div class="profile-menu-desc">Создать, управлять скидками</div>
+        <div class="profile-menu-desc">Создать и управлять кодами</div>
       </div>
       <div class="profile-menu-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg></div>
     </div>
@@ -2067,40 +2158,7 @@ function renderAdminOrders() {
     </div>`;
 }
 
-function renderAdminPromo() {
-  document.getElementById('profile-body').innerHTML = `
-    <div class="admin-sub-panel">
-      <div class="admin-sub-title" onclick="adminBack()">
-        <span>‹</span> Промокоды
-      </div>
-      <div style="color:var(--text2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Создать промокод</div>
-      <input class="admin-input" id="promo-code" placeholder="Код (напр. SUMMER25)" style="text-transform:uppercase">
-      <input class="admin-input" id="promo-discount" placeholder="Скидка (напр. 10% или 200₽)">
-      <input class="admin-input" id="promo-limit" placeholder="Лимит использований (напр. 50)">
-      <button class="admin-btn" onclick="createPromo()">✨ Создать промокод</button>
-      <div class="profile-divider"></div>
-      <div style="color:var(--text2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Активные промокоды</div>
-      <div id="promo-list" style="color:var(--text2);font-size:13px;padding:12px;background:var(--surface2);border-radius:12px;border:1px solid var(--border);text-align:center;">
-        Промокоды будут отображаться здесь
-      </div>
-    </div>`;
-  document.getElementById('promo-code').addEventListener('input', function() {
-    this.value = this.value.toUpperCase();
-  });
-}
 
-function createPromo() {
-  const code = document.getElementById('promo-code').value.trim();
-  const discount = document.getElementById('promo-discount').value.trim();
-  const limit = document.getElementById('promo-limit').value.trim();
-  if (!code || !discount) { showToast('⚠️ Заполни код и скидку'); return; }
-  // Отправляем в бот
-  tg?.sendData && tg.sendData(JSON.stringify({ action: 'create_promo', code, discount, limit: limit || 'unlimited' }));
-  showToast(`✅ Промокод ${code} создан!`);
-  document.getElementById('promo-code').value = '';
-  document.getElementById('promo-discount').value = '';
-  document.getElementById('promo-limit').value = '';
-}
 
 function renderAdminWithdraw() {
   document.getElementById('profile-body').innerHTML = `
@@ -2156,6 +2214,179 @@ function sendBroadcast() {
   showToast('📢 Рассылка запущена!');
   document.getElementById('broadcast-text').value = '';
 }
+
+
+// ══════════════════════════════════════════════════════════════
+// PROMO CODES ENGINE
+// ══════════════════════════════════════════════════════════════
+let PROMOS = JSON.parse(localStorage.getItem('kf_promos') || '{}');
+// Формат: { "CODE": { discount: "10%" | "200₽", limit: 50 | null, used: 0 } }
+
+let activePromo = null; // { code, discount, type:'percent'|'fixed', value:N }
+
+function savePromos() {
+  localStorage.setItem('kf_promos', JSON.stringify(PROMOS));
+}
+
+function parseDiscount(str) {
+  str = str.trim();
+  if (str.endsWith('%')) {
+    const v = parseFloat(str);
+    if (!isNaN(v) && v > 0 && v <= 100) return { type: 'percent', value: v };
+  } else if (str.endsWith('₽') || str.endsWith('р') || /^\d+$/.test(str)) {
+    const v = parseFloat(str);
+    if (!isNaN(v) && v > 0) return { type: 'fixed', value: v };
+  }
+  return null;
+}
+
+function calcDiscountedPrice(origPrice, promo) {
+  if (!promo) return origPrice;
+  if (promo.type === 'percent') return Math.max(1, Math.round(origPrice * (1 - promo.value / 100)));
+  if (promo.type === 'fixed')   return Math.max(1, origPrice - promo.value);
+  return origPrice;
+}
+
+function applyPromoCode() {
+  const input = document.getElementById('promo-field');
+  const status = document.getElementById('promo-status');
+  const badge  = document.getElementById('promo-discount-badge');
+  const badgeTxt = document.getElementById('promo-badge-text');
+  if (!input) return;
+
+  const code = input.value.trim().toUpperCase();
+  if (!code) { status.textContent = 'Введи промокод'; status.className = 'promo-status err'; return; }
+
+  const promo = PROMOS[code];
+  if (!promo) { status.textContent = 'Промокод не найден'; status.className = 'promo-status err'; activePromo = null; updateConfirmWithPromo(); return; }
+  if (promo.limit !== null && promo.used >= promo.limit) {
+    status.textContent = 'Промокод исчерпан'; status.className = 'promo-status err'; activePromo = null; updateConfirmWithPromo(); return;
+  }
+
+  const parsed = parseDiscount(promo.discount);
+  if (!parsed) { status.textContent = 'Ошибка промокода'; status.className = 'promo-status err'; return; }
+
+  activePromo = { code, discount: promo.discount, ...parsed };
+  status.textContent = ''; status.className = 'promo-status ok';
+  badgeTxt.textContent = 'Скидка ' + promo.discount + ' по коду ' + code;
+  badge.style.display = 'inline-flex';
+  updateConfirmWithPromo();
+  showToast('Промокод применён!');
+}
+
+function resetPromo() {
+  activePromo = null;
+  const input = document.getElementById('promo-field');
+  const status = document.getElementById('promo-status');
+  const badge = document.getElementById('promo-discount-badge');
+  if (input) input.value = '';
+  if (status) { status.textContent = ''; status.className = 'promo-status'; }
+  if (badge) badge.style.display = 'none';
+}
+
+function updateConfirmWithPromo() {
+  // Пересчитать сумму в confirm деталях
+  const amtEl = document.querySelector('#confirm-details .confirm-amount');
+  if (!amtEl) return;
+  const orig = parseInt(amtEl.dataset.orig || amtEl.textContent);
+  if (isNaN(orig)) return;
+  const final = activePromo ? calcDiscountedPrice(orig, activePromo) : orig;
+  amtEl.textContent = final + '₽';
+  if (activePromo) {
+    amtEl.innerHTML = '<span style="text-decoration:line-through;color:var(--text2);font-size:14px;margin-right:6px;">' + orig + '₽</span><span style="color:var(--accent3);font-weight:800;">' + final + '₽</span>';
+  }
+  // Обновляем глобальную цену для отправки в бот
+  currentFinalPrice = final;
+}
+
+let currentFinalPrice = 0;
+
+// Перехватываем открытие modal-confirm чтобы сбросить промокод
+const _origOpenModal = openModal;
+
+// ── ADMIN: ПРОМОКОДЫ (полная версия) ──────────────────────────
+function renderAdminPromo() {
+  refreshPromoList();
+  document.getElementById('profile-body').innerHTML = buildPromoHTML();
+  document.getElementById('promo-code-inp').addEventListener('input', function() {
+    this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  });
+}
+
+function buildPromoHTML() {
+  const rows = Object.entries(PROMOS).map(([code, p]) => {
+    const limitText = p.limit === null ? '∞' : (p.used + ' / ' + p.limit);
+    return `<tr>
+      <td><span class="promo-tag">${code}</span></td>
+      <td style="font-weight:700;color:var(--accent3)">${p.discount}</td>
+      <td style="color:var(--text2)">${limitText}</td>
+      <td><button class="promo-del-btn" onclick="deletePromo('${code}')">Удалить</button></td>
+    </tr>`;
+  }).join('');
+
+  const tableHTML = Object.keys(PROMOS).length === 0
+    ? '<div style="text-align:center;color:var(--text2);font-size:13px;padding:16px;">Нет активных промокодов</div>'
+    : `<table class="promo-table">
+        <thead><tr><th>Код</th><th>Скидка</th><th>Лимит</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+
+  return `
+    <div class="admin-sub-panel">
+      <div class="admin-sub-title" onclick="adminBack()">
+        <span>‹</span> Промокоды
+      </div>
+
+      <div style="color:var(--text2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Создать промокод</div>
+      <input class="admin-input" id="promo-code-inp" placeholder="КОД (напр. SUMMER25)" maxlength="24">
+      <input class="admin-input" id="promo-discount-inp" placeholder="Скидка: 10% или 200₽">
+      <input class="admin-input" id="promo-limit-inp" placeholder="Лимит использований (пусто = безлимит)" type="number" min="1">
+      <button class="admin-btn" onclick="adminCreatePromo()" style="margin-top:4px;">Создать промокод</button>
+
+      <div class="profile-divider" style="margin:16px 0;"></div>
+      <div style="color:var(--text2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;">Активные промокоды</div>
+      <div id="promo-table-wrap">
+        ${tableHTML}
+      </div>
+    </div>`;
+}
+
+function refreshPromoList() {
+  PROMOS = JSON.parse(localStorage.getItem('kf_promos') || '{}');
+}
+
+function adminCreatePromo() {
+  const code     = (document.getElementById('promo-code-inp').value || '').trim().toUpperCase();
+  const discount = (document.getElementById('promo-discount-inp').value || '').trim();
+  const limitVal = (document.getElementById('promo-limit-inp').value || '').trim();
+
+  if (!code) { showToast('Введи код промокода'); return; }
+  if (!discount) { showToast('Введи размер скидки'); return; }
+  if (!parseDiscount(discount)) { showToast('Формат скидки: 10% или 200₽'); return; }
+
+  PROMOS[code] = {
+    discount,
+    limit: limitVal ? parseInt(limitVal) : null,
+    used: 0
+  };
+  savePromos();
+  showToast('Промокод ' + code + ' создан!');
+  document.getElementById('profile-body').innerHTML = buildPromoHTML();
+  document.getElementById('promo-code-inp').addEventListener('input', function() {
+    this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  });
+}
+
+function deletePromo(code) {
+  if (!confirm('Удалить промокод ' + code + '?')) return;
+  delete PROMOS[code];
+  savePromos();
+  document.getElementById('promo-table-wrap').innerHTML = buildPromoHTML().match(/<div id="promo-table-wrap">([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>\s*$/)?.[1] || '';
+  showToast('Промокод ' + code + ' удалён');
+  renderAdminPromo();
+}
+
+function createPromo() { adminCreatePromo(); } // legacy alias
 
 // ══════════════════════════════════════════════
 // ADMIN: ЦЕНЫ И СКИДКИ
