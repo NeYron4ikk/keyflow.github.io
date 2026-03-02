@@ -887,6 +887,38 @@
     border-radius: 8px; padding: 5px 10px; font-size: 11px; font-weight: 700;
     color: var(--accent); cursor: pointer;
   }
+
+  /* ══ REVIEWS ══ */
+  .reviews-section { margin-top: 20px; }
+  .reviews-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .reviews-title { font-size: 15px; font-weight: 800; color: var(--text); }
+  .reviews-rating {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .reviews-avg {
+    font-size: 18px; font-weight: 800;
+    font-family: 'Space Mono', monospace; color: #ffd700;
+  }
+  .reviews-count { font-size: 12px; color: var(--text2); }
+  .review-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 8px;
+  }
+  .review-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .review-author { font-size: 13px; font-weight: 700; color: var(--text); }
+  .review-stars { font-size: 13px; }
+  .review-date { font-size: 11px; color: var(--text2); }
+  .review-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .reviews-empty {
+    text-align: center; padding: 16px; color: var(--text2);
+    font-size: 13px;
+  }
 </style>
 </head>
 <body>
@@ -1021,6 +1053,30 @@
     <div class="product-variants" id="ph-variants"></div>
     <button class="btn-primary" id="ph-order-btn" disabled style="opacity:0.4">Оформить сейчас →</button>
     <button class="btn-add-cart" id="ph-cart-btn" disabled style="opacity:0.4">🛒 В корзину</button>
+    <div id="ph-reviews"></div>
+  </div>
+</div>
+
+<!-- ══════════════ MODAL: ПОДТВЕРЖДЕНИЕ ══════════════ -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Подтверждение заказа</div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <div id="confirm-icon" style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"></div>
+        <div>
+          <div id="confirm-name" style="font-size:16px;font-weight:800;color:var(--text);"></div>
+          <div id="confirm-variant" style="font-size:13px;color:var(--text2);margin-top:2px;"></div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;color:var(--text2);font-weight:600;">Итого к оплате</span>
+        <span id="confirm-total" style="font-size:22px;font-weight:800;font-family:'Space Mono',monospace;color:var(--accent);"></span>
+      </div>
+    </div>
+    <button class="btn-primary" id="confirm-proceed-btn">Выбрать способ оплаты →</button>
+    <button class="btn-secondary" onclick="closeModal('modal-confirm')">Отмена</button>
   </div>
 </div>
 
@@ -1430,9 +1486,7 @@ function openProductModal(svcId) {
   btn.onclick = () => {
     if (!selectedVariant) return;
     closeModal('modal-product');
-    document.getElementById('pay-select-sub').textContent =
-      `${selectedService.name} — ${selectedVariant.dur} · ${selectedVariant.price}₽`;
-    openModal('modal-pay-select');
+    openConfirm(selectedService, selectedVariant);
   };
 
   openModal('modal-product');
@@ -1442,6 +1496,9 @@ function openProductModal(svcId) {
     if (!selectedVariant) return;
     addToCart(svc, selectedVariant);
   };
+
+  // Загружаем отзывы
+  renderReviews(svc.id);
 }
 
 function selectVariantInModal(svcId, varId) {
@@ -1889,19 +1946,93 @@ function changeQty(variantId, delta) {
   renderCart();
 }
 
-function checkoutCart() {
-  if (!cart.length) return;
-  const total = cartTotal();
-  document.getElementById('pay-select-sub').textContent =
-    cart.map(i => i.svc.name + ' ' + i.variant.dur).join(', ') + ' · ' + total + '₽';
-  // Store cart order data for bot
+function openConfirm(svc, variant) {
   currentOrderId = Math.floor(10000 + Math.random() * 90000);
-  openModal('modal-pay-select');
+  const iconEl = document.getElementById('confirm-icon');
+  iconEl.className = svc.colorClass;
+  iconEl.innerHTML = LOGOS[svc.logo];
+  Object.assign(iconEl.style, {width:'48px',height:'48px',borderRadius:'14px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'',background:''});
+  document.getElementById('confirm-name').textContent = svc.name;
+  document.getElementById('confirm-variant').textContent = variant.dur;
+  document.getElementById('confirm-total').textContent = variant.price + '₽';
+  document.getElementById('confirm-proceed-btn').onclick = () => {
+    closeModal('modal-confirm');
+    document.getElementById('pay-select-sub').textContent = `${svc.name} — ${variant.dur} · ${variant.price}₽`;
+    openModal('modal-pay-select');
+  };
+  openModal('modal-confirm');
+}
+
+function checkoutCart() {
+  const total = cartTotal();
+  const names = cart.map(i => i.svc.name + ' ' + i.variant.dur).join(', ');
+  currentOrderId = Math.floor(10000 + Math.random() * 90000);
+
+  // Заполняем подтверждение для корзины
+  document.getElementById('confirm-icon').innerHTML = '🛒';
+  document.getElementById('confirm-icon').style.background = 'linear-gradient(135deg,var(--accent),#8b5cf6)';
+  document.getElementById('confirm-icon').style.fontSize = '24px';
+  document.getElementById('confirm-name').textContent = `${cart.length} товар${cart.length > 1 ? 'а' : ''}`;
+  document.getElementById('confirm-variant').textContent = names;
+  document.getElementById('confirm-total').textContent = total + '₽';
+  document.getElementById('confirm-proceed-btn').onclick = () => {
+    closeModal('modal-confirm');
+    document.getElementById('pay-select-sub').textContent = names + ' · ' + total + '₽';
+    openModal('modal-pay-select');
+  };
+  openModal('modal-confirm');
 }
 
 // ══════════════════════════════════════════════
-// LEVELS SYSTEM
+// REVIEWS
 // ══════════════════════════════════════════════
+
+// Отзывы приходят от бота через WebApp или хранятся локально
+window._reviews = window._reviews || {};
+
+function renderReviews(serviceId) {
+  const container = document.getElementById('ph-reviews');
+  const reviews = (window._reviews[serviceId] || []);
+
+  if (!reviews.length) {
+    container.innerHTML = `
+      <div class="reviews-section">
+        <div class="reviews-header">
+          <div class="reviews-title">💬 Отзывы</div>
+        </div>
+        <div class="reviews-empty">Пока нет отзывов — стань первым!</div>
+      </div>`;
+    return;
+  }
+
+  const avg = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1);
+  const stars = r => '⭐'.repeat(r) + '☆'.repeat(5 - r);
+
+  container.innerHTML = `
+    <div class="reviews-section">
+      <div class="reviews-header">
+        <div class="reviews-title">💬 Отзывы</div>
+        <div class="reviews-rating">
+          <div class="reviews-avg">${avg}</div>
+          <div>
+            <div style="font-size:13px">⭐⭐⭐⭐⭐</div>
+            <div class="reviews-count">${reviews.length} отзыв${reviews.length > 1 ? 'а' : ''}</div>
+          </div>
+        </div>
+      </div>
+      ${reviews.map(r => `
+        <div class="review-card">
+          <div class="review-top">
+            <div>
+              <div class="review-author">@${r.username}</div>
+              <div class="review-stars">${stars(r.rating)}</div>
+            </div>
+            <div class="review-date">${r.created_at ? r.created_at.slice(0,10) : ''}</div>
+          </div>
+          ${r.text ? `<div class="review-text">${r.text}</div>` : ''}
+        </div>`).join('')}
+    </div>`;
+}
 
 const LEVELS = [
   { level:1,  min:500,   name:'🛍 Покупатель I',   discount:3 },
