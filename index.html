@@ -1013,6 +1013,11 @@
       <div class="profile-name" id="profile-name">Гость</div>
       <div class="profile-sub" id="profile-sub">Telegram пользователь</div>
       <div class="admin-badge" id="admin-badge" style="display:none">👑 Администратор</div>
+      <div id="profile-balance-chip" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:linear-gradient(135deg,rgba(67,233,123,0.15),rgba(108,99,255,0.15));border:1.5px solid rgba(67,233,123,0.3);border-radius:20px;padding:6px 14px;cursor:pointer;" onclick="renderBalanceScreen()">
+        <span style="font-size:14px;">💰</span>
+        <span id="profile-header-balance" style="font-size:14px;font-weight:800;color:#43e97b;font-family:'Space Mono',monospace;">...</span>
+        <span style="font-size:11px;color:var(--text2);">баланс</span>
+      </div>
     </div>
     <div class="profile-body" id="profile-body"></div>
   </div>
@@ -1170,6 +1175,14 @@
     <div class="modal-title">Способ оплаты</div>
     <div class="modal-sub" id="pay-select-sub">Выбери удобный способ</div>
     <div class="payment-options">
+      <button class="pay-btn" id="pay-balance-btn">
+        <div class="pay-icon" style="background:linear-gradient(135deg,#43e97b,#38f9d7)">💰</div>
+        <div class="pay-info">
+          <div class="pay-name">Баланс</div>
+          <div class="pay-desc" id="pay-balance-desc">Загрузка...</div>
+        </div>
+        <div class="pay-arrow">›</div>
+      </button>
       <button class="pay-btn" id="pay-sbp-btn">
         <div class="pay-icon" style="background:linear-gradient(135deg,#0070f3,#0050c0)">🏦</div>
         <div class="pay-info">
@@ -1441,6 +1454,12 @@ let sbpTimerInterval = null;
 // ══════════════════════════════════════════════
 function openModal(id) {
   document.getElementById(id).classList.add('open');
+  // При открытии выбора оплаты — всегда обновляем баланс
+  if (id === 'modal-pay-select') {
+    updatePaySelectBalance();
+    // Запрашиваем актуальный баланс у бота
+    if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'get_balance' }));
+  }
 }
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
@@ -1697,6 +1716,74 @@ document.getElementById('btn-order').addEventListener('click', () => {
 });
 
 // ══════════════════════════════════════════════
+// БАЛАНС — обновление отображения в модалке оплаты
+// ══════════════════════════════════════════════
+function updatePaySelectBalance() {
+  const bal = window._userBalance || 0;
+  const price = selectedVariant?.isTopup ? 0 : (window._appliedPromo?.finalPrice || selectedVariant?.price || 0);
+  const btn = document.getElementById('pay-balance-btn');
+  const descEl = document.getElementById('pay-balance-desc');
+  if (!btn) return;
+
+  // Скрываем кнопку баланса при пополнении самого баланса
+  if (selectedVariant?.isTopup) {
+    btn.style.display = 'none';
+    return;
+  }
+
+  // Всегда показываем кнопку баланса
+  btn.style.display = 'flex';
+
+  if (bal >= price && price > 0) {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+    descEl.textContent = `Доступно: ${bal.toFixed(0)}₽ · Спишется: ${price}₽`;
+    btn.style.borderColor = 'rgba(67,233,123,0.4)';
+  } else if (bal > 0) {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
+    descEl.textContent = `Недостаточно (есть ${bal.toFixed(0)}₽, нужно ${price}₽)`;
+    btn.style.borderColor = 'var(--border)';
+  } else {
+    btn.disabled = true;
+    btn.style.opacity = '0.4';
+    btn.style.cursor = 'not-allowed';
+    descEl.textContent = bal === 0 && window._userBalance === undefined
+      ? 'Загрузка баланса...'
+      : 'Баланс пуст — пополни в профиле';
+    btn.style.borderColor = 'var(--border)';
+  }
+}
+
+document.getElementById('pay-balance-btn').addEventListener('click', () => {
+  const bal = window._userBalance || 0;
+  const price = window._appliedPromo?.finalPrice || selectedVariant?.price || 0;
+  if (bal < price) return;
+
+  closeModal('modal-pay-select');
+
+  // Мгновенное списание — показываем успех
+  openModal('modal-waiting');
+  document.querySelector('#modal-waiting .status-title') &&
+    (document.querySelector('#modal-waiting .status-title').textContent = 'Оплата с баланса...');
+
+  sendOrderToBot('balance');
+
+  setTimeout(() => {
+    closeModal('modal-waiting');
+    window._userBalance = (window._userBalance || 0) - price;
+    document.getElementById('success-desc').innerHTML =
+      `Оплачено с баланса.<br>Остаток: <strong>${window._userBalance.toFixed(0)}₽</strong>`;
+    openModal('modal-success');
+    // Обновляем отображение баланса в профиле
+    const descEl = document.getElementById('profile-balance-desc');
+    if (descEl) descEl.textContent = `${window._userBalance.toFixed(0)}₽ · пополни или трать`;
+  }, 1500);
+});
+
+// ══════════════════════════════════════════════
 // ОПЛАТА СБП
 // ══════════════════════════════════════════════
 document.getElementById('pay-sbp-btn').addEventListener('click', () => {
@@ -1832,6 +1919,18 @@ document.getElementById('card-pay-btn').addEventListener('click', () => {
 function sendOrderToBot(payMethod) {
   const promoCode = window._appliedPromo?.code || '';
   const steamLogin = selectedVariant?.steamLogin || '';
+
+  // Пополнение баланса
+  if (selectedVariant?.isTopup) {
+    const data = JSON.stringify({
+      action: 'topup_balance',
+      amount: selectedVariant.price,
+      payment: payMethod,
+      order_id: currentOrderId,
+    });
+    if (tg) tg.sendData(data);
+    return;
+  }
 
   // If cart checkout
   if (cart.length && !selectedVariant) {
@@ -2087,17 +2186,21 @@ function openConfirm(svc, variant) {
   window._confirmedService = svc;
   const iconEl = document.getElementById('confirm-icon');
   iconEl.className = svc.colorClass;
-  iconEl.innerHTML = LOGOS[svc.logo];
+  iconEl.innerHTML = LOGOS[svc.logo] || '';
   Object.assign(iconEl.style, {width:'48px',height:'48px',borderRadius:'14px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'',background:''});
   document.getElementById('confirm-name').textContent = svc.name;
   document.getElementById('confirm-variant').textContent = variant.dur;
   document.getElementById('confirm-total').textContent = variant.price + '₽';
   document.getElementById('confirm-promo-input').value = '';
   document.getElementById('confirm-promo-result').textContent = '';
+  // Показываем поле промокода (могло быть скрыто пополнением баланса)
+  const promoWrap = document.getElementById('confirm-promo-input').closest('div');
+  if (promoWrap) promoWrap.style.display = '';
   document.getElementById('confirm-proceed-btn').onclick = () => {
     closeModal('modal-confirm');
     const finalPrice = window._appliedPromo ? window._appliedPromo.finalPrice : variant.price;
     document.getElementById('pay-select-sub').textContent = `${svc.name} — ${variant.dur} · ${finalPrice}₽`;
+    updatePaySelectBalance();
     openModal('modal-pay-select');
   };
   openModal('modal-confirm');
@@ -2173,6 +2276,21 @@ window.addEventListener('message', function(e) {
           p.code === d.code ? {...p, is_active: 0} : p
         );
         renderPromoList(window._promosCache);
+      }
+    }
+    // Баланс пользователя
+    if (d.action === 'balance_data') {
+      window._userBalance = parseFloat(d.balance) || 0;
+      const fmt = `${window._userBalance.toFixed(0)}₽`;
+      const descEl = document.getElementById('profile-balance-desc');
+      if (descEl) descEl.textContent = `${fmt} · пополни или трать`;
+      const amountEl = document.getElementById('balance-amount');
+      if (amountEl) amountEl.textContent = fmt;
+      const chipEl = document.getElementById('profile-header-balance');
+      if (chipEl) chipEl.textContent = fmt;
+      // Обновить кнопку в модалке оплаты если она открыта
+      if (document.getElementById('modal-pay-select')?.classList.contains('open')) {
+        updatePaySelectBalance();
       }
     }
   } catch(err) {}
@@ -2434,6 +2552,9 @@ let wheelSpinning = false;
 let wheelAngle = 0;
 
 function renderWheelScreen() {
+  const today = new Date().toDateString();
+  const alreadySpun = window._lastSpinDate === today;
+
   document.getElementById('profile-body').innerHTML = `
     <div class="admin-sub-panel">
       <div class="admin-sub-title" onclick="adminBack()"><span>‹</span> Колесо фортуны</div>
@@ -2446,9 +2567,14 @@ function renderWheelScreen() {
           <canvas id="wheel-canvas" width="260" height="260"></canvas>
           <div class="wheel-center">🎰</div>
         </div>
-        <button class="wheel-spin-btn" id="wheel-btn" onclick="spinWheel()">
-          🎰 Крутить колесо!
-        </button>
+        ${alreadySpun
+          ? `<div style="background:rgba(108,99,255,0.12);border:1.5px solid rgba(108,99,255,0.3);border-radius:16px;padding:14px 18px;text-align:center;margin-top:12px;">
+               <div style="font-size:20px;margin-bottom:6px;">⏳</div>
+               <div style="font-size:14px;font-weight:700;color:var(--text);">Ты уже крутил сегодня!</div>
+               <div style="font-size:12px;color:var(--text2);margin-top:4px;">Возвращайся завтра — удача улыбнётся 🍀</div>
+             </div>`
+          : `<button class="wheel-spin-btn" id="wheel-btn" onclick="spinWheel()">🎰 Крутить колесо!</button>`
+        }
         <div class="wheel-result" id="wheel-result"></div>
       </div>
     </div>`;
@@ -2506,8 +2632,12 @@ function drawWheel(rotation) {
 
 function spinWheel() {
   if (wheelSpinning) return;
+  const today = new Date().toDateString();
+  if (window._lastSpinDate === today) {
+    showToast('⏳ Уже крутил сегодня! Приходи завтра.');
+    return;
+  }
 
-  // Проверяем через tg.sendData — но покажем анимацию сразу
   wheelSpinning = true;
   const btn = document.getElementById('wheel-btn');
   if (btn) btn.disabled = true;
@@ -2524,7 +2654,6 @@ function spinWheel() {
   function animate(now) {
     const elapsed = now - start;
     const progress = Math.min(elapsed / duration, 1);
-    // Ease out cubic
     const eased = 1 - Math.pow(1 - progress, 3);
     wheelAngle = startAngle + targetAngle * eased;
     drawWheel(wheelAngle);
@@ -2533,9 +2662,11 @@ function spinWheel() {
       requestAnimationFrame(animate);
     } else {
       wheelSpinning = false;
+      // Сохраняем дату — один раз в день
+      window._lastSpinDate = today;
       showWheelResult(targetIdx);
       // Отправляем в бот
-      tg.sendData && tg.sendData(JSON.stringify({ action: 'spin_wheel' }));
+      if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'spin_wheel' }));
     }
   }
   requestAnimationFrame(animate);
@@ -2559,6 +2690,121 @@ function showWheelResult(idx) {
 
 let giftTab = 'buy';
 let giftAmount = null;
+
+// ── БАЛАНС ────────────────────────────────────────────────────────────────────
+
+function renderBalanceScreen() {
+  const bal = window._userBalance !== undefined ? window._userBalance : null;
+  const balDisplay = bal !== null ? `${bal.toFixed(0)}₽` : '...';
+
+  document.getElementById('profile-body').innerHTML = `
+    <div class="admin-sub-panel">
+      <div class="admin-sub-title" onclick="adminBack()"><span>‹</span> Мой баланс</div>
+
+      <!-- Карточка баланса -->
+      <div style="background:linear-gradient(135deg,rgba(108,99,255,0.2),rgba(67,233,123,0.1));border:1.5px solid rgba(108,99,255,0.3);border-radius:20px;padding:24px;text-align:center;margin-bottom:20px;">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;">Доступный баланс</div>
+        <div id="balance-amount" style="font-size:42px;font-weight:800;color:var(--accent);font-family:'Space Mono',monospace;">${balDisplay}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:6px;">Используется при оплате заказов</div>
+      </div>
+
+      <!-- Пополнить баланс -->
+      <div style="color:var(--text2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Пополнить баланс</div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+        ${[100,200,500,1000,2000,5000].map(a => `
+          <button onclick="selectTopupAmount(${a})" id="topup-${a}"
+            style="background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:12px 6px;color:var(--text);font-weight:700;font-size:14px;cursor:pointer;transition:all 0.2s;">
+            ${a}₽
+          </button>`).join('')}
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <input id="topup-custom" type="number" placeholder="Своя сумма (₽)" min="50" max="100000"
+          style="flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;font-family:inherit;"
+          oninput="selectTopupAmount(parseInt(this.value)||0,true)" />
+      </div>
+
+      <button id="topup-btn" onclick="topupBalance()" disabled
+        style="width:100%;padding:16px;border:none;border-radius:16px;background:linear-gradient(135deg,#6c63ff,#43e97b);color:white;font-weight:800;font-size:16px;cursor:pointer;opacity:0.4;transition:all 0.2s;">
+        💰 Пополнить
+      </button>
+
+      <div class="profile-divider"></div>
+      <div style="color:var(--text2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Как использовать</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:14px;font-size:13px;color:var(--text2);line-height:1.8;">
+        ✅ Баланс пополняется через активацию <b>подарочных сертификатов</b><br>
+        ✅ Начисляется за бонусы <b>Колеса фортуны</b><br>
+        ✅ Накапливается с <b>программой лояльности</b><br>
+        🛒 При оформлении заказа выбери <b>«Оплатить с баланса»</b>
+      </div>
+    </div>`;
+
+  // Запрашиваем актуальный баланс у бота
+  if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'get_balance' }));
+}
+
+let _selectedTopup = 0;
+function selectTopupAmount(amount, fromInput) {
+  _selectedTopup = amount;
+  // Снять выделение с кнопок
+  [100,200,500,1000,2000,5000].forEach(a => {
+    const btn = document.getElementById(`topup-${a}`);
+    if (btn) {
+      btn.style.borderColor = a === amount ? 'var(--accent)' : 'var(--border)';
+      btn.style.color = a === amount ? 'var(--accent)' : 'var(--text)';
+      btn.style.background = a === amount ? 'rgba(108,99,255,0.12)' : 'var(--surface2)';
+    }
+  });
+  if (!fromInput) {
+    const inp = document.getElementById('topup-custom');
+    if (inp) inp.value = '';
+  }
+  const btn = document.getElementById('topup-btn');
+  if (btn) {
+    btn.disabled = amount < 50;
+    btn.style.opacity = amount >= 50 ? '1' : '0.4';
+    btn.style.cursor = amount >= 50 ? 'pointer' : 'not-allowed';
+    if (amount >= 50) btn.textContent = `💰 Пополнить на ${amount}₽`;
+    else btn.textContent = '💰 Пополнить';
+  }
+}
+
+function topupBalance() {
+  if (_selectedTopup < 50) return;
+  currentOrderId = Math.floor(10000 + Math.random() * 90000);
+  const fakeService = { id: 0, name: 'Пополнение баланса', logo: 'topup', colorClass: 'color-steam' };
+  const fakeVariant = { id: 0, dur: `${_selectedTopup}₽`, price: _selectedTopup, isTopup: true };
+
+  // Показываем confirm модалку с правильным содержимым
+  window._appliedPromo = null;
+  window._confirmedVariant = fakeVariant;
+  window._confirmedService = fakeService;
+
+  const iconEl = document.getElementById('confirm-icon');
+  iconEl.className = '';
+  iconEl.style.cssText = 'width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#43e97b,#38f9d7);font-size:24px;flex-shrink:0;';
+  iconEl.innerHTML = '💰';
+  document.getElementById('confirm-name').textContent = 'Пополнение баланса';
+  document.getElementById('confirm-variant').textContent = `${_selectedTopup}₽ будут зачислены на счёт`;
+  document.getElementById('confirm-total').textContent = _selectedTopup + '₽';
+  document.getElementById('confirm-promo-input').value = '';
+  document.getElementById('confirm-promo-result').textContent = '';
+  // Скрываем поле промокода для пополнения
+  document.getElementById('confirm-promo-input').closest('div').style.display = 'none';
+
+  selectedService = fakeService;
+  selectedVariant = fakeVariant;
+
+  document.getElementById('confirm-proceed-btn').onclick = () => {
+    closeModal('modal-confirm');
+    document.getElementById('pay-select-sub').textContent = `Пополнение баланса · ${_selectedTopup}₽`;
+    // Показываем баланс в модалке оплаты
+    updatePaySelectBalance();
+    openModal('modal-pay-select');
+  };
+  openModal('modal-confirm');
+}
 
 function renderGiftScreen() {
   document.getElementById('profile-body').innerHTML = `
@@ -2669,6 +2915,8 @@ document.getElementById('user-badge').addEventListener('click', openProfile);
 function openProfile() {
   renderProfileMain();
   document.getElementById('profile-overlay').classList.add('open');
+  // Запрашиваем баланс у бота
+  if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'get_balance' }));
 }
 
 function closeProfile() {
@@ -2775,6 +3023,14 @@ function renderProfileMain() {
       <div class="profile-menu-text">
         <div class="profile-menu-label">Сертификаты</div>
         <div class="profile-menu-desc">Купи или активируй подарочный код</div>
+      </div>
+      <div class="profile-menu-arrow">›</div>
+    </div>
+    <div class="profile-menu-item" onclick="renderBalanceScreen()">
+      <div class="profile-menu-icon" style="background:rgba(67,233,123,0.15)">💰</div>
+      <div class="profile-menu-text">
+        <div class="profile-menu-label">Мой баланс</div>
+        <div class="profile-menu-desc" id="profile-balance-desc">Загрузка...</div>
       </div>
       <div class="profile-menu-arrow">›</div>
     </div>
@@ -3014,6 +3270,26 @@ function renderAdminWithdraw() {
       <div style="margin-top:12px;padding:12px;background:rgba(67,233,123,0.08);border:1px solid rgba(67,233,123,0.2);border-radius:12px;font-size:12px;color:var(--text2);line-height:1.6;">
         ℹ️ Запрос фиксируется в системе и уведомление приходит в бот. Баланс пересчитывается автоматически.
       </div>
+
+      <div class="profile-divider"></div>
+      <div style="color:var(--text2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">🔧 Накрутить баланс</div>
+      <div style="background:rgba(255,193,7,0.08);border:1px solid rgba(255,193,7,0.25);border-radius:12px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.6;">
+        ⚠️ Зачисляет сумму на баланс. Оставь ID пустым — зачислит себе.
+      </div>
+      <input class="admin-input" id="cheat-tg-id" placeholder="Telegram ID (пусто = себе)" type="number">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;" id="cheat-grid">
+        <button onclick="selectCheatAmount(100)" id="cheat-100" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 4px;color:var(--text);font-weight:700;font-size:13px;cursor:pointer;transition:all 0.2s;">+100₽</button>
+        <button onclick="selectCheatAmount(500)" id="cheat-500" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 4px;color:var(--text);font-weight:700;font-size:13px;cursor:pointer;transition:all 0.2s;">+500₽</button>
+        <button onclick="selectCheatAmount(1000)" id="cheat-1000" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 4px;color:var(--text);font-weight:700;font-size:13px;cursor:pointer;transition:all 0.2s;">+1000₽</button>
+        <button onclick="selectCheatAmount(2000)" id="cheat-2000" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 4px;color:var(--text);font-weight:700;font-size:13px;cursor:pointer;transition:all 0.2s;">+2000₽</button>
+        <button onclick="selectCheatAmount(5000)" id="cheat-5000" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 4px;color:var(--text);font-weight:700;font-size:13px;cursor:pointer;transition:all 0.2s;">+5000₽</button>
+        <button onclick="selectCheatAmount(10000)" id="cheat-10000" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 4px;color:var(--text);font-weight:700;font-size:13px;cursor:pointer;transition:all 0.2s;">+10000₽</button>
+      </div>
+      <input class="admin-input" id="cheat-custom" type="number" placeholder="Своя сумма (₽)" oninput="selectCheatAmount(parseInt(this.value)||0,true)">
+      <button id="cheat-btn" onclick="adminAddBalance()" disabled
+        style="width:100%;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,#f7931a,#ff6584);color:white;font-weight:800;font-size:15px;cursor:pointer;opacity:0.4;margin-top:2px;transition:all 0.2s;">
+        💰 Зачислить
+      </button>
     </div>`;
 }
 
@@ -3025,6 +3301,58 @@ function requestWithdraw() {
   showToast(`💸 Запрос на вывод ${amount}₽ отправлен!`);
   document.getElementById('withdraw-amount').value = '';
   document.getElementById('withdraw-details').value = '';
+}
+
+let _cheatAmount = 0;
+function selectCheatAmount(amount, fromInput) {
+  _cheatAmount = amount;
+  [100, 500, 1000, 2000, 5000, 10000].forEach(a => {
+    const btn = document.getElementById(`cheat-${a}`);
+    if (!btn) return;
+    const active = a === amount && !fromInput;
+    btn.style.borderColor = active ? '#f7931a' : 'var(--border)';
+    btn.style.color = active ? '#f7931a' : 'var(--text)';
+    btn.style.background = active ? 'rgba(247,147,26,0.12)' : 'var(--surface2)';
+  });
+  if (!fromInput) {
+    const inp = document.getElementById('cheat-custom');
+    if (inp) inp.value = '';
+  }
+  const btn = document.getElementById('cheat-btn');
+  if (btn) {
+    const ok = amount >= 1;
+    btn.disabled = !ok;
+    btn.style.opacity = ok ? '1' : '0.4';
+    btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+    if (ok) btn.textContent = `💰 Зачислить ${amount}₽`;
+    else btn.textContent = '💰 Зачислить';
+  }
+}
+
+function adminAddBalance() {
+  if (_cheatAmount < 1) return;
+  const tgIdInput = document.getElementById('cheat-tg-id')?.value.trim();
+  const user = tg?.initDataUnsafe?.user;
+  const targetId = tgIdInput ? parseInt(tgIdInput) : (user?.id || 0);
+  if (!targetId) { showToast('⚠️ Укажи Telegram ID'); return; }
+
+  if (tg?.sendData) tg.sendData(JSON.stringify({
+    action: 'admin_add_balance',
+    tg_id: targetId,
+    amount: _cheatAmount
+  }));
+
+  // Обновляем локальный баланс если зачисляем себе
+  if (!tgIdInput || parseInt(tgIdInput) === user?.id) {
+    window._userBalance = (window._userBalance || 0) + _cheatAmount;
+    const chipEl = document.getElementById('profile-header-balance');
+    if (chipEl) chipEl.textContent = `${window._userBalance.toFixed(0)}₽`;
+  }
+
+  showToast(`✅ +${_cheatAmount}₽ зачислено на баланс #${targetId}`);
+  _cheatAmount = 0;
+  selectCheatAmount(0);
+  document.getElementById('cheat-tg-id').value = '';
 }
 
 function renderAdminBroadcast() {
