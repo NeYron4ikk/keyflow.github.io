@@ -888,7 +888,77 @@
     color: var(--accent); cursor: pointer;
   }
 
-  /* ══ REVIEWS ══ */
+  /* ══ WHEEL OF FORTUNE ══ */
+  .wheel-wrap {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 8px 0 16px;
+  }
+  .wheel-canvas-wrap {
+    position: relative; width: 260px; height: 260px; margin: 0 auto 20px;
+  }
+  #wheel-canvas { border-radius: 50%; display: block; }
+  .wheel-pointer {
+    position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+    font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    z-index: 10;
+  }
+  .wheel-center {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--surface); border: 3px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; z-index: 5;
+  }
+  .wheel-spin-btn {
+    width: 100%; padding: 14px; border-radius: 14px; border: none;
+    background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+    color: white; font-size: 16px; font-weight: 800; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(255,107,107,0.4);
+    transition: all 0.2s;
+  }
+  .wheel-spin-btn:active { transform: scale(0.97); }
+  .wheel-spin-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .wheel-result {
+    margin-top: 16px; padding: 14px; border-radius: 14px;
+    background: var(--surface2); border: 1px solid var(--border);
+    text-align: center; font-size: 15px; font-weight: 700; color: var(--text);
+    display: none;
+  }
+  .wheel-result.show { display: block; animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  /* ══ GIFT CERTIFICATES ══ */
+  .gift-amount-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px;
+  }
+  .gift-amount-btn {
+    padding: 14px 8px; border-radius: 14px; border: 2px solid var(--border);
+    background: var(--surface2); color: var(--text); font-size: 15px; font-weight: 800;
+    cursor: pointer; text-align: center; transition: all 0.2s;
+  }
+  .gift-amount-btn:active, .gift-amount-btn.selected {
+    border-color: var(--accent); background: rgba(108,99,255,0.1); color: var(--accent);
+  }
+  .gift-code-display {
+    background: linear-gradient(135deg, rgba(67,233,123,0.1), rgba(108,99,255,0.1));
+    border: 2px dashed rgba(108,99,255,0.3); border-radius: 14px;
+    padding: 18px; text-align: center; margin: 14px 0;
+  }
+  .gift-code-text {
+    font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 800;
+    color: var(--accent); letter-spacing: 2px; margin-bottom: 8px;
+  }
+  .gift-tabs {
+    display: flex; gap: 8px; margin-bottom: 16px;
+  }
+  .gift-tab {
+    flex: 1; padding: 10px; border-radius: 12px; border: 2px solid var(--border);
+    background: var(--surface2); color: var(--text2); font-size: 13px; font-weight: 700;
+    cursor: pointer; text-align: center;
+  }
+  .gift-tab.active {
+    border-color: var(--accent); background: rgba(108,99,255,0.1); color: var(--accent);
+  }
   .reviews-section { margin-top: 20px; }
   .reviews-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -1074,6 +1144,19 @@
         <span style="font-size:13px;color:var(--text2);font-weight:600;">Итого к оплате</span>
         <span id="confirm-total" style="font-size:22px;font-weight:800;font-family:'Space Mono',monospace;color:var(--accent);"></span>
       </div>
+    </div>
+    <!-- Промокод -->
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;gap:8px;align-items:stretch;">
+        <input id="confirm-promo-input" placeholder="Промокод (необязательно)" 
+          style="flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;text-transform:uppercase;font-family:inherit;"
+          oninput="this.value=this.value.toUpperCase()" />
+        <button onclick="applyPromoCode()" 
+          style="background:linear-gradient(135deg,#6c63ff,#8b5cf6);border:none;border-radius:12px;padding:11px 16px;color:white;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">
+          Применить
+        </button>
+      </div>
+      <div id="confirm-promo-result" style="font-size:12px;margin-top:6px;min-height:16px;"></div>
     </div>
     <button class="btn-primary" id="confirm-proceed-btn">Выбрать способ оплаты →</button>
     <button class="btn-secondary" onclick="closeModal('modal-confirm')">Отмена</button>
@@ -1443,6 +1526,22 @@ function openProductModal(svcId) {
   const btn = document.getElementById('ph-order-btn');
 
   if (svc.custom) {
+    const steamLoginField = svc.logo === 'steam' ? `
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <div style="width:28px;height:28px;border-radius:8px;background:#1b2838;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.029 4.524 4.524s-2.03 4.524-4.524 4.524h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.718L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.606 0 11.979 0z"/></svg>
+          </div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text);">Логин Steam</div>
+            <div style="font-size:11px;color:var(--text2);">Для пополнения кошелька</div>
+          </div>
+        </div>
+        <input id="ph-steam-login" type="text" placeholder="your_steam_login"
+          oninput="onSteamLoginInput()"
+          style="width:100%;box-sizing:border-box;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;font-family:inherit;transition:border-color 0.2s;"
+          onfocus="this.style.borderColor='#1b2838'" onblur="this.style.borderColor='var(--border)'" />
+      </div>` : '';
     variantsEl.innerHTML = `
       <div class="product-custom-wrap" id="ph-custom-wrap">
         <div class="product-custom-label">Введи сумму пополнения</div>
@@ -1452,6 +1551,7 @@ function openProductModal(svcId) {
           <span class="product-custom-currency">₽</span>
         </div>
         <div class="product-custom-hint">Минимум 100₽ · Максимум 50 000₽ · Наценка 10%</div>
+        ${steamLoginField}
       </div>`;
     btn.textContent = 'Введи сумму ↑';
     btn.disabled = true;
@@ -1528,18 +1628,47 @@ function onCustomInput(svcId) {
   const val = parseInt(input.value);
   const btn = document.getElementById('ph-order-btn');
   const svc = SERVICES.find(s => s.id === svcId);
+  const steamLogin = document.getElementById('ph-steam-login')?.value.trim() || '';
 
   if (val >= 100 && val <= 50000) {
     const price = Math.ceil(val * 1.1);
     selectedService = svc;
-    selectedVariant = { id: 9000 + svcId, dur: `${val}₽`, price };
-    btn.textContent = `Оформить — ${price}₽ →`;
-    btn.disabled = false;
-    btn.style.opacity = '1';
+    selectedVariant = { id: 9000 + svcId, dur: `${val}₽`, price, steamLogin };
+    const needLogin = svc.logo === 'steam';
+    if (needLogin && !steamLogin) {
+      btn.textContent = 'Введи логин Steam ↑';
+      btn.disabled = true;
+      btn.style.opacity = '0.4';
+    } else {
+      btn.textContent = `Оформить — ${price}₽ →`;
+      btn.disabled = false;
+      btn.style.opacity = '1';
+    }
     showBottomBar(`${svc.name} — ${val}₽`, price);
   } else {
     selectedVariant = null;
     btn.textContent = 'Введи сумму ↑';
+    btn.disabled = true;
+    btn.style.opacity = '0.4';
+  }
+}
+
+function onSteamLoginInput() {
+  const loginEl = document.getElementById('ph-steam-login');
+  if (!loginEl || !selectedService) return;
+  const login = loginEl.value.trim();
+  if (selectedVariant) selectedVariant.steamLogin = login;
+  const btn = document.getElementById('ph-order-btn');
+  const amountInput = document.getElementById('ph-custom-input');
+  const val = parseInt(amountInput?.value || '0');
+  if (val >= 100 && login) {
+    const price = Math.ceil(val * 1.1);
+    selectedVariant = { ...selectedVariant, price, steamLogin: login };
+    btn.textContent = `Оформить — ${price}₽ →`;
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  } else if (!login) {
+    btn.textContent = 'Введи логин Steam ↑';
     btn.disabled = true;
     btn.style.opacity = '0.4';
   }
@@ -1563,10 +1692,8 @@ function hideBottomBar() {
 // ОФОРМИТЬ ЗАКАЗ
 // ══════════════════════════════════════════════
 document.getElementById('btn-order').addEventListener('click', () => {
-  if (!selectedVariant) return;
-  document.getElementById('pay-select-sub').textContent =
-    `${selectedService.name} — ${selectedVariant.dur} · ${selectedVariant.price}₽`;
-  openModal('modal-pay-select');
+  if (!selectedVariant || !selectedService) return;
+  openConfirm(selectedService, selectedVariant);
 });
 
 // ══════════════════════════════════════════════
@@ -1703,6 +1830,9 @@ document.getElementById('card-pay-btn').addEventListener('click', () => {
 // TELEGRAM COMMUNICATION
 // ══════════════════════════════════════════════
 function sendOrderToBot(payMethod) {
+  const promoCode = window._appliedPromo?.code || '';
+  const steamLogin = selectedVariant?.steamLogin || '';
+
   // If cart checkout
   if (cart.length && !selectedVariant) {
     const data = JSON.stringify({
@@ -1711,19 +1841,23 @@ function sendOrderToBot(payMethod) {
       total: cartTotal(),
       payment: payMethod,
       order_id: currentOrderId,
+      promo_code: promoCode,
     });
     if (tg) tg.sendData(data);
     return;
   }
+  const finalPrice = window._appliedPromo ? window._appliedPromo.finalPrice : selectedVariant.price;
   const data = JSON.stringify({
     action: 'create_order',
     service_id: selectedService.id,
     variant_id: selectedVariant.id,
     service_name: selectedService.name,
     variant_dur: selectedVariant.dur,
-    amount: selectedVariant.price,
+    amount: finalPrice,
     payment: payMethod,
     order_id: currentOrderId,
+    promo_code: promoCode,
+    steam_login: steamLogin,
   });
   if (tg) tg.sendData(data);
 }
@@ -1948,6 +2082,9 @@ function changeQty(variantId, delta) {
 
 function openConfirm(svc, variant) {
   currentOrderId = Math.floor(10000 + Math.random() * 90000);
+  window._appliedPromo = null;
+  window._confirmedVariant = variant;
+  window._confirmedService = svc;
   const iconEl = document.getElementById('confirm-icon');
   iconEl.className = svc.colorClass;
   iconEl.innerHTML = LOGOS[svc.logo];
@@ -1955,12 +2092,107 @@ function openConfirm(svc, variant) {
   document.getElementById('confirm-name').textContent = svc.name;
   document.getElementById('confirm-variant').textContent = variant.dur;
   document.getElementById('confirm-total').textContent = variant.price + '₽';
+  document.getElementById('confirm-promo-input').value = '';
+  document.getElementById('confirm-promo-result').textContent = '';
   document.getElementById('confirm-proceed-btn').onclick = () => {
     closeModal('modal-confirm');
-    document.getElementById('pay-select-sub').textContent = `${svc.name} — ${variant.dur} · ${variant.price}₽`;
+    const finalPrice = window._appliedPromo ? window._appliedPromo.finalPrice : variant.price;
+    document.getElementById('pay-select-sub').textContent = `${svc.name} — ${variant.dur} · ${finalPrice}₽`;
     openModal('modal-pay-select');
   };
   openModal('modal-confirm');
+}
+
+function applyPromoCode() {
+  const code = document.getElementById('confirm-promo-input').value.trim().toUpperCase();
+  const result = document.getElementById('confirm-promo-result');
+  if (!code) { result.style.color='#ff6584'; result.textContent = '⚠️ Введи промокод'; return; }
+
+  const variant = window._confirmedVariant;
+  const svc = window._confirmedService;
+  if (!variant) return;
+
+  // Отправляем запрос на проверку промокода боту
+  result.style.color = 'var(--text2)';
+  result.textContent = '⏳ Проверяем...';
+
+  if (tg) {
+    tg.sendData(JSON.stringify({ action: 'check_promo', code, service_id: svc?.id || 0 }));
+    // Ответ придёт через window._promoCheckResult (бот вернёт через HapticFeedback / AnswerWebApp)
+    // Для UX показываем инлайн результат через событие
+    window._pendingPromoCode = code;
+    window._pendingPromoService = svc;
+    window._pendingPromoVariant = variant;
+    // Fallback таймаут если бот не ответил
+    window._promoTimeout = setTimeout(() => {
+      result.style.color = '#ff6584';
+      result.textContent = '❌ Промокод не найден или уже использован';
+      window._appliedPromo = null;
+    }, 5000);
+  } else {
+    // Dev mode: симулируем скидку для теста
+    result.style.color = '#43e97b';
+    result.textContent = '✅ Промокод применён: скидка 10%';
+    const discounted = Math.round(variant.price * 0.9);
+    window._appliedPromo = { code, discount: 10, finalPrice: discounted };
+    document.getElementById('confirm-total').textContent = discounted + '₽';
+  }
+}
+
+// Обработчик ответа бота на проверку промокода
+window.addEventListener('message', function(e) {
+  try {
+    const d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+    // Ответ на check_promo
+    if (d.action === 'promo_result' && window._pendingPromoCode) {
+      clearTimeout(window._promoTimeout);
+      const result = document.getElementById('confirm-promo-result');
+      if (!result) return;
+      if (d.valid) {
+        const variant = window._pendingPromoVariant;
+        const discounted = Math.round(variant.price * (1 - d.discount / 100));
+        window._appliedPromo = { code: window._pendingPromoCode, discount: d.discount, finalPrice: discounted };
+        result.style.color = '#43e97b';
+        result.textContent = `✅ Скидка ${d.discount}% — итого ${discounted}₽`;
+        document.getElementById('confirm-total').textContent = discounted + '₽';
+      } else {
+        result.style.color = '#ff6584';
+        result.textContent = d.error || '❌ Промокод не подходит для этого товара';
+        window._appliedPromo = null;
+      }
+      window._pendingPromoCode = null;
+    }
+    // Список промокодов от бота
+    if (d.action === 'promos_list') {
+      renderPromoList(d.promos || []);
+    }
+    // Подтверждение удаления
+    if (d.action === 'promo_deleted') {
+      if (window._promosCache) {
+        window._promosCache = window._promosCache.map(p =>
+          p.code === d.code ? {...p, is_active: 0} : p
+        );
+        renderPromoList(window._promosCache);
+      }
+    }
+  } catch(err) {}
+});
+
+// Перехват сообщений бота через Telegram WebApp
+if (tg) {
+  const _origSendData = tg.sendData?.bind(tg);
+  tg.onEvent && tg.onEvent('message', function(msg) {
+    // Бот шлёт __WEBAPP_DATA__{...}__END__
+    if (typeof msg === 'string' && msg.includes('__WEBAPP_DATA__')) {
+      const match = msg.match(/__WEBAPP_DATA__(.+?)__END__/s);
+      if (match) {
+        try {
+          const d = JSON.parse(match[1]);
+          window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(d) }));
+        } catch(e) {}
+      }
+    }
+  });
 }
 
 function checkoutCart() {
@@ -2184,6 +2416,244 @@ function renderLevelScreen() {
   }, 100);
 }
 
+// ══════════════════════════════════════════════
+// WHEEL OF FORTUNE
+// ══════════════════════════════════════════════
+
+const WHEEL_SECTORS = [
+  { label: '😅 Пусто',           color: '#2a2a3a', textColor: '#666' },
+  { label: '🎟 -5% Claude Pro',  color: '#1a1a4e', textColor: '#6c63ff' },
+  { label: '😅 Пусто',           color: '#2a2a3a', textColor: '#666' },
+  { label: '💰 50 руб',          color: '#1a3a1a', textColor: '#43e97b' },
+  { label: '🎟 -10% Gemini',     color: '#2a1a4e', textColor: '#8b5cf6' },
+  { label: '🎟 -15% Sora',       color: '#3a1a4e', textColor: '#ff6584' },
+  { label: '💰 100 руб',         color: '#1a3a2a', textColor: '#43e97b' },
+];
+
+let wheelSpinning = false;
+let wheelAngle = 0;
+
+function renderWheelScreen() {
+  document.getElementById('profile-body').innerHTML = `
+    <div class="admin-sub-panel">
+      <div class="admin-sub-title" onclick="adminBack()"><span>‹</span> Колесо фортуны</div>
+      <div class="wheel-wrap">
+        <div style="text-align:center;margin-bottom:12px;">
+          <div style="font-size:13px;color:var(--text2);">Крути раз в день и выигрывай скидки и бонусы!</div>
+        </div>
+        <div class="wheel-canvas-wrap">
+          <div class="wheel-pointer">▼</div>
+          <canvas id="wheel-canvas" width="260" height="260"></canvas>
+          <div class="wheel-center">🎰</div>
+        </div>
+        <button class="wheel-spin-btn" id="wheel-btn" onclick="spinWheel()">
+          🎰 Крутить колесо!
+        </button>
+        <div class="wheel-result" id="wheel-result"></div>
+      </div>
+    </div>`;
+  drawWheel(wheelAngle);
+}
+
+function drawWheel(rotation) {
+  const canvas = document.getElementById('wheel-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cx = 130, cy = 130, r = 124;
+  const n = WHEEL_SECTORS.length;
+  const arc = (2 * Math.PI) / n;
+
+  ctx.clearRect(0, 0, 260, 260);
+
+  // Тень
+  ctx.shadowColor = 'rgba(108,99,255,0.3)';
+  ctx.shadowBlur = 20;
+
+  WHEEL_SECTORS.forEach((s, i) => {
+    const start = rotation + i * arc - Math.PI / 2;
+    const end = start + arc;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, end);
+    ctx.closePath();
+    ctx.fillStyle = s.color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Текст
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(start + arc / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = s.textColor;
+    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.shadowBlur = 0;
+    ctx.fillText(s.label, r - 8, 4);
+    ctx.restore();
+  });
+
+  // Внешний круг
+  ctx.shadowBlur = 0;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(108,99,255,0.4)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+
+function spinWheel() {
+  if (wheelSpinning) return;
+
+  // Проверяем через tg.sendData — но покажем анимацию сразу
+  wheelSpinning = true;
+  const btn = document.getElementById('wheel-btn');
+  if (btn) btn.disabled = true;
+
+  // Рандомный сектор
+  const n = WHEEL_SECTORS.length;
+  const targetIdx = Math.floor(Math.random() * n);
+  const arc = (2 * Math.PI) / n;
+  const targetAngle = 5 * 2 * Math.PI + (2 * Math.PI - targetIdx * arc - arc / 2);
+  const duration = 4000;
+  const start = performance.now();
+  const startAngle = wheelAngle;
+
+  function animate(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    // Ease out cubic
+    const eased = 1 - Math.pow(1 - progress, 3);
+    wheelAngle = startAngle + targetAngle * eased;
+    drawWheel(wheelAngle);
+
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      wheelSpinning = false;
+      showWheelResult(targetIdx);
+      // Отправляем в бот
+      tg.sendData && tg.sendData(JSON.stringify({ action: 'spin_wheel' }));
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+function showWheelResult(idx) {
+  const sector = WHEEL_SECTORS[idx];
+  const result = document.getElementById('wheel-result');
+  if (!result) return;
+  const isWin = !sector.label.includes('Пусто');
+  result.innerHTML = isWin
+    ? `🎉 <b>${sector.label}!</b><br><span style="font-size:12px;color:var(--text2);font-weight:400">Приз придёт в бот через секунду</span>`
+    : `😅 <b>Пусто!</b><br><span style="font-size:12px;color:var(--text2);font-weight:400">Возвращайся завтра!</span>`;
+  result.style.borderColor = isWin ? 'rgba(108,99,255,0.3)' : 'var(--border)';
+  result.classList.add('show');
+}
+
+// ══════════════════════════════════════════════
+// GIFT CERTIFICATES
+// ══════════════════════════════════════════════
+
+let giftTab = 'buy';
+let giftAmount = null;
+
+function renderGiftScreen() {
+  document.getElementById('profile-body').innerHTML = `
+    <div class="admin-sub-panel">
+      <div class="admin-sub-title" onclick="adminBack()"><span>‹</span> Сертификаты</div>
+      <div class="gift-tabs">
+        <div class="gift-tab ${giftTab==='buy'?'active':''}" onclick="switchGiftTab('buy')">🎁 Купить</div>
+        <div class="gift-tab ${giftTab==='activate'?'active':''}" onclick="switchGiftTab('activate')">🔑 Активировать</div>
+      </div>
+      <div id="gift-tab-content"></div>
+    </div>`;
+  renderGiftTab();
+}
+
+function switchGiftTab(tab) {
+  giftTab = tab;
+  giftAmount = null;
+  document.querySelectorAll('.gift-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.gift-tab')[tab === 'buy' ? 0 : 1].classList.add('active');
+  renderGiftTab();
+}
+
+function renderGiftTab() {
+  const el = document.getElementById('gift-tab-content');
+  if (!el) return;
+
+  if (giftTab === 'buy') {
+    el.innerHTML = `
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;">
+        Купи сертификат и подари другу — он потратит его на любой товар в магазине!
+      </div>
+      <div class="gift-amount-grid">
+        <div class="gift-amount-btn ${giftAmount===500?'selected':''}" onclick="selectGiftAmount(500)">500₽</div>
+        <div class="gift-amount-btn ${giftAmount===1000?'selected':''}" onclick="selectGiftAmount(1000)">1000₽</div>
+        <div class="gift-amount-btn ${giftAmount===2000?'selected':''}" onclick="selectGiftAmount(2000)">2000₽</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+        <input id="gift-custom-input" type="number" placeholder="Своя сумма" min="100" max="10000"
+          style="flex:1;background:var(--surface2);border:2px solid var(--border);border-radius:12px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;"
+          oninput="selectGiftAmount(parseInt(this.value)||null)"
+          value="${![500,1000,2000].includes(giftAmount) && giftAmount ? giftAmount : ''}"/>
+        <span style="color:var(--text2);font-size:14px">₽</span>
+      </div>
+      <button class="btn-primary" onclick="buyGiftCertificate()" ${!giftAmount?'disabled style="opacity:0.4"':''}>
+        Купить сертификат на ${giftAmount||'...'}₽ →
+      </button>`;
+  } else {
+    el.innerHTML = `
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px;">
+        Введи код сертификата который тебе подарили — сумма зачислится на баланс.
+      </div>
+      <input id="gift-activate-input" type="text" placeholder="GIFT-XXXXXXXX"
+        style="width:100%;background:var(--surface2);border:2px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--text);font-size:15px;font-family:'Space Mono',monospace;letter-spacing:2px;outline:none;box-sizing:border-box;margin-bottom:12px;text-transform:uppercase;"
+        oninput="this.value=this.value.toUpperCase()"/>
+      <button class="btn-primary" onclick="activateGiftCertificate()">
+        🔑 Активировать
+      </button>`;
+  }
+}
+
+function selectGiftAmount(amount) {
+  giftAmount = amount;
+  // Обновляем кнопки
+  document.querySelectorAll('.gift-amount-btn').forEach((btn, i) => {
+    const amounts = [500, 1000, 2000];
+    btn.classList.toggle('selected', amounts[i] === amount);
+  });
+  // Обновляем кнопку покупки
+  const buyBtn = document.querySelector('#gift-tab-content .btn-primary');
+  if (buyBtn) {
+    buyBtn.disabled = !amount;
+    buyBtn.style.opacity = amount ? '1' : '0.4';
+    buyBtn.textContent = `Купить сертификат на ${amount||'...'}₽ →`;
+  }
+}
+
+function buyGiftCertificate() {
+  if (!giftAmount || giftAmount < 100) {
+    showToast('❌ Минимум 100₽');
+    return;
+  }
+  tg.sendData(JSON.stringify({ action: 'buy_gift', amount: giftAmount }));
+  showToast('🎁 Запрос отправлен! Код придёт в бот.');
+}
+
+function activateGiftCertificate() {
+  const code = document.getElementById('gift-activate-input')?.value?.trim();
+  if (!code || code.length < 5) {
+    showToast('❌ Введи код сертификата');
+    return;
+  }
+  tg.sendData(JSON.stringify({ action: 'activate_gift', code }));
+  showToast('🔑 Запрос отправлен!');
+}
+
 renderCatalog();
 
 // ══════════════════════════════════════════════
@@ -2292,8 +2762,24 @@ function renderProfileMain() {
       </div>
       <div class="profile-menu-arrow">›</div>
     </div>
+    <div class="profile-menu-item" onclick="renderWheelScreen()">
+      <div class="profile-menu-icon" style="background:rgba(255,107,107,0.15)">🎰</div>
+      <div class="profile-menu-text">
+        <div class="profile-menu-label">Колесо фортуны</div>
+        <div class="profile-menu-desc">Крути раз в день — выигрывай скидки</div>
+      </div>
+      <div class="profile-menu-arrow">›</div>
+    </div>
+    <div class="profile-menu-item" onclick="renderGiftScreen()">
+      <div class="profile-menu-icon" style="background:rgba(67,233,123,0.15)">🎁</div>
+      <div class="profile-menu-text">
+        <div class="profile-menu-label">Сертификаты</div>
+        <div class="profile-menu-desc">Купи или активируй подарочный код</div>
+      </div>
+      <div class="profile-menu-arrow">›</div>
+    </div>
     <div class="profile-menu-item" onclick="copyRefLink()">
-      <div class="profile-menu-icon" style="background:rgba(255,193,7,0.15)">🎁</div>
+      <div class="profile-menu-icon" style="background:rgba(255,193,7,0.15)">🔗</div>
       <div class="profile-menu-text">
         <div class="profile-menu-label">Реферальная ссылка</div>
         <div class="profile-menu-desc">Приведи друга — получи бонус</div>
@@ -2419,22 +2905,90 @@ function renderAdminPromo() {
       <button class="admin-btn" onclick="createPromo()">✨ Создать промокод</button>
       <div class="profile-divider"></div>
       <div style="color:var(--text2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Активные промокоды</div>
-      <div id="promo-list" style="color:var(--text2);font-size:13px;padding:12px;background:var(--surface2);border-radius:12px;border:1px solid var(--border);text-align:center;">
-        Промокоды будут отображаться здесь
+      <div id="promo-list">
+        <div style="color:var(--text2);font-size:13px;padding:12px;background:var(--surface2);border-radius:12px;border:1px solid var(--border);text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <span style="opacity:0.6;">⏳</span> Загружаем промокоды...
+        </div>
       </div>
     </div>`;
   document.getElementById('promo-code').addEventListener('input', function() {
     this.value = this.value.toUpperCase();
   });
+  // Запрашиваем список у бота
+  if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'get_promos' }));
+  // Если не Telegram или данные уже есть локально — показываем кэш
+  if (window._promosCache) renderPromoList(window._promosCache);
+}
+
+function renderPromoList(promos) {
+  window._promosCache = promos;
+  const el = document.getElementById('promo-list');
+  if (!el) return;
+  if (!promos || promos.length === 0) {
+    el.innerHTML = `<div style="color:var(--text2);font-size:13px;padding:16px;background:var(--surface2);border-radius:12px;border:1px solid var(--border);text-align:center;">
+      📭 Промокодов пока нет
+    </div>`;
+    return;
+  }
+  const SERVICE_NAMES = { 0: 'Все товары', 1: 'Claude Pro', 2: 'Gemini Advanced', 3: 'Sora', 5: 'Steam' };
+  el.innerHTML = promos.map(p => {
+    const usesText = p.limit_uses === -1 ? '∞' : `${p.used_count}/${p.limit_uses}`;
+    const svcLabel = SERVICE_NAMES[p.service_id] || `Товар #${p.service_id}`;
+    const statusColor = p.is_active ? '#43e97b' : '#ff6584';
+    const statusText = p.is_active ? 'активен' : 'отключён';
+    return `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <span style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--accent);">${p.code}</span>
+          <span style="font-size:11px;color:${statusColor};background:${statusColor}22;border-radius:6px;padding:2px 7px;">${statusText}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2);display:flex;gap:10px;flex-wrap:wrap;">
+          <span>🎟 ${p.discount}</span>
+          <span>📊 ${usesText} использ.</span>
+          <span>🎯 ${svcLabel}</span>
+        </div>
+      </div>
+      ${p.is_active ? `<button onclick="deletePromo('${p.code}')" style="background:rgba(255,101,132,0.15);border:1px solid rgba(255,101,132,0.3);border-radius:8px;padding:6px 10px;color:#ff6584;font-size:12px;cursor:pointer;white-space:nowrap;">🗑 Удалить</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function deletePromo(code) {
+  if (!confirm(`Деактивировать промокод ${code}?`)) return;
+  if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'delete_promo', code }));
+  // Оптимистично убираем из кэша
+  if (window._promosCache) {
+    window._promosCache = window._promosCache.map(p => p.code === code ? {...p, is_active: 0} : p);
+    renderPromoList(window._promosCache);
+  }
+  showToast(`🗑 Промокод ${code} деактивирован`);
 }
 
 function createPromo() {
-  const code = document.getElementById('promo-code').value.trim();
+  const code = document.getElementById('promo-code').value.trim().toUpperCase();
   const discount = document.getElementById('promo-discount').value.trim();
   const limit = document.getElementById('promo-limit').value.trim();
   if (!code || !discount) { showToast('⚠️ Заполни код и скидку'); return; }
+
+  const limitNum = parseInt(limit) || -1;
   // Отправляем в бот
-  tg?.sendData && tg.sendData(JSON.stringify({ action: 'create_promo', code, discount, limit: limit || 'unlimited' }));
+  if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'create_promo', code, discount, limit: limit || 'unlimited' }));
+
+  // Добавляем в локальный кэш сразу
+  const newPromo = {
+    id: Date.now(),
+    code,
+    discount,
+    limit_uses: limitNum,
+    used_count: 0,
+    is_active: 1,
+    service_id: 0,
+    created_at: new Date().toLocaleString('ru')
+  };
+  window._promosCache = [newPromo, ...(window._promosCache || [])];
+  renderPromoList(window._promosCache);
+
   showToast(`✅ Промокод ${code} создан!`);
   document.getElementById('promo-code').value = '';
   document.getElementById('promo-discount').value = '';
