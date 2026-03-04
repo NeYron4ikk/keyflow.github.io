@@ -1362,6 +1362,10 @@ if (tg) {
   tg.expand();
   tg.setHeaderColor('#0a0a0f');
   tg.setBackgroundColor('#0a0a0f');
+  // Загружаем промокоды сразу при запуске для локальной проверки
+  setTimeout(() => {
+    if (tg.sendData) tg.sendData(JSON.stringify({ action: 'get_promos' }));
+  }, 1000);
 }
 
 // ══════════════════════════════════════════════
@@ -1920,6 +1924,18 @@ function sendOrderToBot(payMethod) {
   const promoCode = window._appliedPromo?.code || '';
   const steamLogin = selectedVariant?.steamLogin || '';
 
+  // Покупка подарочного сертификата
+  if (selectedVariant?.isGiftPurchase) {
+    const data = JSON.stringify({
+      action: 'buy_gift',
+      amount: selectedVariant.giftAmount,
+      payment: payMethod,
+      order_id: currentOrderId,
+    });
+    if (tg) tg.sendData(data);
+    return;
+  }
+
   // Пополнение баланса
   if (selectedVariant?.isTopup) {
     const data = JSON.stringify({
@@ -2215,31 +2231,68 @@ function applyPromoCode() {
   const svc = window._confirmedService;
   if (!variant) return;
 
-  // Отправляем запрос на проверку промокода боту
   result.style.color = 'var(--text2)';
   result.textContent = '⏳ Проверяем...';
 
-  if (tg) {
-    tg.sendData(JSON.stringify({ action: 'check_promo', code, service_id: svc?.id || 0 }));
-    // Ответ придёт через window._promoCheckResult (бот вернёт через HapticFeedback / AnswerWebApp)
-    // Для UX показываем инлайн результат через событие
-    window._pendingPromoCode = code;
-    window._pendingPromoService = svc;
-    window._pendingPromoVariant = variant;
-    // Fallback таймаут если бот не ответил
-    window._promoTimeout = setTimeout(() => {
+  // Проверяем локально — сначала личные промокоды из уровня
+  const personalPromos = window._levelData?.promos || [];
+  const personal = personalPromos.find(p => p.code === code && !p.used);
+  if (personal) {
+    const disc = parseInt(personal.discount);
+    const discounted = Math.round(variant.price * (1 - disc / 100));
+    window._appliedPromo = { code, discount: disc, finalPrice: discounted };
+    result.style.color = '#43e97b';
+    result.textContent = `✅ Скидка ${disc}% — итого ${discounted}₽`;
+    document.getElementById('confirm-total').textContent = discounted + '₽';
+    return;
+  }
+
+  // Проверяем кеш публичных промокодов (загружаются при старте)
+  const publicPromos = window._publicPromos || [];
+  const pub = publicPromos.find(p => p.code === code && p.is_active);
+  if (pub) {
+    const svcId = pub.service_id || 0;
+    if (svcId !== 0 && svcId !== (svc?.id || 0)) {
+      result.style.color = '#ff6584';
+      result.textContent = '❌ Промокод не для этого товара';
+      window._appliedPromo = null;
+      return;
+    }
+    if (pub.limit_uses !== -1 && pub.used_count >= pub.limit_uses) {
+      result.style.color = '#ff6584';
+      result.textContent = '❌ Лимит использований исчерпан';
+      window._appliedPromo = null;
+      return;
+    }
+    const disc = parseInt(String(pub.discount).replace('%','').replace('₽','').trim());
+    if (!disc || disc <= 0) {
+      result.style.color = '#ff6584';
+      result.textContent = '❌ Промокод недействителен';
+      return;
+    }
+    const discounted = Math.round(variant.price * (1 - disc / 100));
+    window._appliedPromo = { code, discount: disc, finalPrice: discounted };
+    result.style.color = '#43e97b';
+    result.textContent = `✅ Скидка ${disc}% — итого ${discounted}₽`;
+    document.getElementById('confirm-total').textContent = discounted + '₽';
+    // Обновляем локальный счётчик
+    pub.used_count = (pub.used_count || 0) + 1;
+    return;
+  }
+
+  // Промокод не найден локально — спрашиваем бота (async, с fallback)
+  window._pendingPromoCode = code;
+  window._pendingPromoVariant = variant;
+  window._pendingPromoService = svc;
+  if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'check_promo', code, service_id: svc?.id || 0 }));
+  window._promoTimeout = setTimeout(() => {
+    if (window._pendingPromoCode === code) {
       result.style.color = '#ff6584';
       result.textContent = '❌ Промокод не найден или уже использован';
       window._appliedPromo = null;
-    }, 5000);
-  } else {
-    // Dev mode: симулируем скидку для теста
-    result.style.color = '#43e97b';
-    result.textContent = '✅ Промокод применён: скидка 10%';
-    const discounted = Math.round(variant.price * 0.9);
-    window._appliedPromo = { code, discount: 10, finalPrice: discounted };
-    document.getElementById('confirm-total').textContent = discounted + '₽';
-  }
+      window._pendingPromoCode = null;
+    }
+  }, 4000);
 }
 
 // Обработчик ответа бота на проверку промокода
@@ -2301,7 +2354,11 @@ window.addEventListener('message', function(e) {
       }
     }
     if (d.action === 'promos_list') {
-      renderPromoList(d.promos || []);
+      window._promosCache = d.promos || [];
+      window._publicPromos = d.promos || []; // кеш для локальной проверки промокодов
+      // Рендерим список только если открыта вкладка промокодов в админке
+      const promoListWrap = document.getElementById('promo-list-wrap');
+      if (promoListWrap) renderPromoList(window._promosCache);
     }
     // Подтверждение удаления
     if (d.action === 'promo_deleted') {
@@ -2329,23 +2386,6 @@ window.addEventListener('message', function(e) {
     }
   } catch(err) {}
 });
-
-// Перехват сообщений бота через Telegram WebApp
-if (tg) {
-  const _origSendData = tg.sendData?.bind(tg);
-  tg.onEvent && tg.onEvent('message', function(msg) {
-    // Бот шлёт __WEBAPP_DATA__{...}__END__
-    if (typeof msg === 'string' && msg.includes('__WEBAPP_DATA__')) {
-      const match = msg.match(/__WEBAPP_DATA__(.+?)__END__/s);
-      if (match) {
-        try {
-          const d = JSON.parse(match[1]);
-          window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(d) }));
-        } catch(e) {}
-      }
-    }
-  });
-}
 
 function checkoutCart() {
   const total = cartTotal();
@@ -2667,6 +2707,17 @@ function drawWheel(rotation) {
   ctx.stroke();
 }
 
+// Маппинг секторов колеса к типам призов для бота
+const WHEEL_SECTOR_PRIZES = [
+  { type: 'empty',    value: '0',   service_id: 0 },
+  { type: 'discount', value: '5',   service_id: 1, service_name: 'Claude Pro' },
+  { type: 'empty',    value: '0',   service_id: 0 },
+  { type: 'bonus',    value: '50',  service_id: 0 },
+  { type: 'discount', value: '10',  service_id: 2, service_name: 'Gemini Advanced' },
+  { type: 'discount', value: '15',  service_id: 3, service_name: 'Sora' },
+  { type: 'bonus',    value: '100', service_id: 0 },
+];
+
 function spinWheel() {
   if (wheelSpinning) return;
   const today = new Date().toDateString();
@@ -2679,21 +2730,20 @@ function spinWheel() {
   const btn = document.getElementById('wheel-btn');
   if (btn) btn.disabled = true;
 
-  // Запрашиваем у бота что выпало — он решает
-  if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'spin_wheel' }));
+  // Определяем результат локально (те же веса что и у бота)
+  const weights = [25, 22, 15, 8, 18, 8, 4];
+  const total = weights.reduce((a, b) => a + b, 0);
+  let rand = Math.random() * total, targetIdx = 0;
+  for (let i = 0; i < weights.length; i++) {
+    rand -= weights[i];
+    if (rand <= 0) { targetIdx = i; break; }
+  }
 
-  // Запускаем случайную анимацию (визуально), результат придёт от бота
-  const n = WHEEL_SECTORS.length;
-  const targetIdx = Math.floor(Math.random() * n);
-  const arc = (2 * Math.PI) / n;
+  const arc = (2 * Math.PI) / WHEEL_SECTORS.length;
   const targetAngle = 5 * 2 * Math.PI + (2 * Math.PI - targetIdx * arc - arc / 2);
   const duration = 4000;
   const start = performance.now();
   const startAngle = wheelAngle;
-
-  // Сохраняем колбэк — вызовется когда бот пришлёт реальный результат
-  window._wheelAnimDone = false;
-  window._wheelBotResult = null;
 
   function animate(now) {
     const elapsed = now - start;
@@ -2706,56 +2756,47 @@ function spinWheel() {
       requestAnimationFrame(animate);
     } else {
       wheelSpinning = false;
-      window._wheelAnimDone = true;
       window._lastSpinDate = today;
-      // Если бот уже ответил — показываем его результат
-      if (window._wheelBotResult !== null) {
-        showWheelResult(window._wheelBotResult.idx, window._wheelBotResult);
-      } else {
-        // Ждём ответа бота
-        const resultEl = document.getElementById('wheel-result');
-        if (resultEl) {
-          resultEl.innerHTML = '⏳ Получаем результат...';
-          resultEl.classList.add('show');
-        }
+
+      const prize = WHEEL_SECTOR_PRIZES[targetIdx];
+
+      // Показываем результат сразу
+      showWheelResult(targetIdx, prize);
+
+      // Обновляем баланс локально если бонус
+      if (prize.type === 'bonus') {
+        window._userBalance = (window._userBalance || 0) + parseFloat(prize.value);
+        const chipEl = document.getElementById('profile-header-balance');
+        if (chipEl) chipEl.textContent = `${window._userBalance.toFixed(0)}₽`;
       }
+
+      // Сообщаем боту — он запишет в БД и пришлёт промокод если скидка
+      if (tg?.sendData) tg.sendData(JSON.stringify({
+        action: 'spin_wheel',
+        sector_idx: targetIdx,
+        prize_type: prize.type,
+        prize_value: prize.value,
+        service_id: prize.service_id || 0
+      }));
     }
   }
   requestAnimationFrame(animate);
 }
 
-function showWheelResult(idx, botData) {
+function showWheelResult(idx, prize) {
   const result = document.getElementById('wheel-result');
   if (!result) return;
 
-  if (botData) {
-    // Результат от бота — достоверный
-    const type = botData.prize_type;
-    const value = botData.prize_value;
-    const label = botData.label || '';
-
-    if (type === 'empty') {
-      result.innerHTML = `😅 <b>Не повезло!</b><br><span style="font-size:12px;color:var(--text2);">Возвращайся завтра — повезёт! 🍀</span>`;
-      result.style.borderColor = 'var(--border)';
-    } else if (type === 'bonus') {
-      // Обновляем баланс локально
-      window._userBalance = (window._userBalance || 0) + parseFloat(value);
-      const chipEl = document.getElementById('profile-header-balance');
-      if (chipEl) chipEl.textContent = `${window._userBalance.toFixed(0)}₽`;
-      result.innerHTML = `🎉 <b>+${value}₽ на баланс!</b><br><span style="font-size:12px;color:var(--text2);">Зачислено — проверь в профиле 💰</span>`;
-      result.style.borderColor = 'rgba(67,233,123,0.4)';
-    } else if (type === 'discount') {
-      result.innerHTML = `🎉 <b>${label}</b><br><span style="font-size:12px;color:var(--text2);">Промокод отправлен в бот! 🎟</span>`;
-      result.style.borderColor = 'rgba(108,99,255,0.4)';
-    }
-  } else {
-    // Fallback — только анимация без данных бота
-    const sector = WHEEL_SECTORS[idx];
-    const isWin = !sector.label.includes('Пусто');
-    result.innerHTML = isWin
-      ? `🎉 <b>${sector.label}!</b><br><span style="font-size:12px;color:var(--text2);">Приз придёт в бот через секунду</span>`
-      : `😅 <b>Пусто!</b><br><span style="font-size:12px;color:var(--text2);">Возвращайся завтра!</span>`;
-    result.style.borderColor = isWin ? 'rgba(108,99,255,0.3)' : 'var(--border)';
+  if (prize.type === 'empty') {
+    result.innerHTML = `😅 <b>Не повезло!</b><br><span style="font-size:12px;color:var(--text2);">Возвращайся завтра — повезёт! 🍀</span>`;
+    result.style.borderColor = 'var(--border)';
+  } else if (prize.type === 'bonus') {
+    result.innerHTML = `🎉 <b>+${prize.value}₽ на баланс!</b><br><span style="font-size:12px;color:var(--text2);">Уже зачислено 💰</span>`;
+    result.style.borderColor = 'rgba(67,233,123,0.4)';
+  } else if (prize.type === 'discount') {
+    const svc = prize.service_name || 'товар';
+    result.innerHTML = `🎉 <b>-${prize.value}% на ${svc}!</b><br><span style="font-size:12px;color:var(--text2);">Промокод придёт в бот 🎟</span>`;
+    result.style.borderColor = 'rgba(108,99,255,0.4)';
   }
   result.classList.add('show');
 }
@@ -2962,11 +3003,35 @@ function buyGiftCertificate() {
     showToast('❌ Минимум 100₽');
     return;
   }
-  if (!tg?.sendData) { showToast('❌ Открой через Telegram бот'); return; }
-  tg.sendData(JSON.stringify({ action: 'buy_gift', amount: giftAmount }));
-  showToast('🎁 Запрос отправлен! Код придёт в бот через секунду.');
-  giftAmount = null;
-  renderGiftTab();
+
+  // Открываем обычный флоу оплаты — сертификат создаётся только после оплаты
+  currentOrderId = Math.floor(10000 + Math.random() * 90000);
+  const fakeService = { id: 0, name: 'Подарочный сертификат', logo: 'gift', colorClass: '' };
+  const fakeVariant = { id: 0, dur: `на ${giftAmount}₽`, price: giftAmount, isGiftPurchase: true, giftAmount };
+
+  window._appliedPromo = null;
+  selectedService = fakeService;
+  selectedVariant = fakeVariant;
+
+  const iconEl = document.getElementById('confirm-icon');
+  iconEl.className = '';
+  iconEl.style.cssText = 'width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#43e97b,#38f9d7);font-size:26px;flex-shrink:0;';
+  iconEl.innerHTML = '🎁';
+  document.getElementById('confirm-name').textContent = 'Подарочный сертификат';
+  document.getElementById('confirm-variant').textContent = `На сумму ${giftAmount}₽ — подарите другу`;
+  document.getElementById('confirm-total').textContent = giftAmount + '₽';
+  document.getElementById('confirm-promo-input').value = '';
+  document.getElementById('confirm-promo-result').textContent = '';
+  const promoWrap = document.getElementById('confirm-promo-input').closest('div');
+  if (promoWrap) promoWrap.style.display = 'none'; // промокод не нужен
+
+  document.getElementById('confirm-proceed-btn').onclick = () => {
+    closeModal('modal-confirm');
+    document.getElementById('pay-select-sub').textContent = `Сертификат на ${giftAmount}₽`;
+    updatePaySelectBalance();
+    openModal('modal-pay-select');
+  };
+  openModal('modal-confirm');
 }
 
 function activateGiftCertificate() {
@@ -2995,8 +3060,9 @@ document.getElementById('user-badge').addEventListener('click', openProfile);
 function openProfile() {
   renderProfileMain();
   document.getElementById('profile-overlay').classList.add('open');
-  // Запрашиваем баланс у бота
+  // Запрашиваем баланс и промокоды у бота
   if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'get_balance' }));
+  if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'get_promos' }));
 }
 
 function closeProfile() {
@@ -3241,10 +3307,12 @@ function renderAdminPromo() {
       <button class="admin-btn" onclick="createPromo()">✨ Создать промокод</button>
       <div class="profile-divider"></div>
       <div style="color:var(--text2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">Активные промокоды</div>
+      <div id="promo-list-wrap">
       <div id="promo-list">
         <div style="color:var(--text2);font-size:13px;padding:12px;background:var(--surface2);border-radius:12px;border:1px solid var(--border);text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;">
           <span style="opacity:0.6;">⏳</span> Загружаем промокоды...
         </div>
+      </div>
       </div>
     </div>`;
   document.getElementById('promo-code').addEventListener('input', function() {
@@ -3460,3 +3528,4 @@ function sendBroadcast() {
 </script>
 </body>
 </html>
+ 
