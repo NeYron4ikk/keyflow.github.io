@@ -1362,10 +1362,56 @@ if (tg) {
   tg.expand();
   tg.setHeaderColor('#0a0a0f');
   tg.setBackgroundColor('#0a0a0f');
-  // Загружаем промокоды сразу при запуске для локальной проверки
-  setTimeout(() => {
-    if (tg.sendData) tg.sendData(JSON.stringify({ action: 'get_promos' }));
-  }, 1000);
+  // Загружаем все данные пользователя через HTTP API сразу при старте
+  setTimeout(() => loadUserData(), 800);
+}
+
+// ── HTTP API ────────────────────────────────────────────────────────────────
+async function apiCall(action, body = {}) {
+  const initData = tg?.initData || '';
+  try {
+    const res = await fetch(`${CONFIG.SERVER_URL}/api/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ init_data: initData, action, ...body })
+    });
+    return await res.json();
+  } catch(e) {
+    console.error('API error:', e);
+    return { ok: false, error: e.message };
+  }
+}
+
+async function loadUserData() {
+  const initData = tg?.initData || '';
+  if (!initData) return; // не в Telegram — пропускаем
+  try {
+    const res = await fetch(`${CONFIG.SERVER_URL}/api/data?init_data=${encodeURIComponent(initData)}`);
+    if (!res.ok) return;
+    const d = await res.json();
+    // Сохраняем промокоды
+    window._publicPromos = d.promos || [];
+    window._promosCache = d.promos || [];
+    // Сохраняем баланс
+    if (d.balance !== undefined) {
+      window._userBalance = parseFloat(d.balance) || 0;
+      const chipEl = document.getElementById('balance-chip');
+      if (chipEl) chipEl.textContent = `${window._userBalance.toFixed(0)}₽`;
+    }
+    // Сохраняем уровень и личные промокоды
+    window._levelData = {
+      spent: d.spent || 0,
+      level: d.level || 0,
+      promos: d.personal_promos || []
+    };
+    window._isAdmin = d.is_admin || false;
+    // Показываем кнопку тест-режима в профиле если admin
+    const testBtn = document.getElementById('admin-test-btn');
+    if (testBtn) testBtn.style.display = d.is_admin ? 'flex' : 'none';
+    console.log('[KeyFlow] Данные загружены:', { balance: d.balance, level: d.level, promos: (d.promos||[]).length });
+  } catch(e) {
+    console.warn('[KeyFlow] API недоступен:', e.message);
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -1378,6 +1424,7 @@ const CONFIG = {
   USDT_RATE:     90,                    // ← курс RUB/USDT (обновляй раз в день)
   CRYPTO_BOT_URL: 'https://t.me/CryptoBot', // ← ссылка инвойса придёт из бота
   YOOKASSA_URL:  '',                    // ← заполнит бот динамически
+  SERVER_URL:    'http://45.150.36.21:8080', // ← IP адрес твоего VPS
 };
 
 // ══════════════════════════════════════════════
@@ -1461,8 +1508,8 @@ function openModal(id) {
   // При открытии выбора оплаты — всегда обновляем баланс
   if (id === 'modal-pay-select') {
     updatePaySelectBalance();
-    // Запрашиваем актуальный баланс у бота
-    if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'get_balance' }));
+    // Обновляем баланс через HTTP API
+    loadUserData().then(() => updatePaySelectBalance()).catch(() => {});
   }
 }
 function closeModal(id) {
@@ -2501,8 +2548,12 @@ function getUserLevelInfo() {
 }
 
 function renderLevelScreen() {
-  // Запрашиваем актуальные данные у бота
-  if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'get_level_data' }));
+  // Обновляем данные через HTTP API (не блокируем рендер)
+  loadUserData().then(() => {
+    // Перерендериваем если экран ещё открыт
+    const title = document.querySelector('.profile-screen-header h3');
+    if (title && title.textContent.includes('уровень')) renderLevelScreen();
+  }).catch(() => {});
 
   const info = getUserLevelInfo();
   const spent = info.spent;
@@ -2857,8 +2908,8 @@ function renderBalanceScreen() {
       </div>
     </div>`;
 
-  // Запрашиваем актуальный баланс у бота
-  if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'get_balance' }));
+  // Обновляем баланс через HTTP API
+  loadUserData().catch(() => {});
 }
 
 let _selectedTopup = 0;
@@ -3060,9 +3111,8 @@ document.getElementById('user-badge').addEventListener('click', openProfile);
 function openProfile() {
   renderProfileMain();
   document.getElementById('profile-overlay').classList.add('open');
-  // Запрашиваем баланс и промокоды у бота
-  if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'get_balance' }));
-  if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'get_promos' }));
+  // Обновляем данные через HTTP API
+  loadUserData().then(() => renderProfileMain()).catch(() => {});
 }
 
 function closeProfile() {
@@ -3133,6 +3183,14 @@ function renderProfileMain() {
       <div class="profile-menu-text">
         <div class="profile-menu-label">Рассылка</div>
         <div class="profile-menu-desc">Сообщение всем пользователям</div>
+      </div>
+      <div class="profile-menu-arrow">›</div>
+    </div>
+    <div class="profile-menu-item" onclick="renderTestPanel()">
+      <div class="profile-menu-icon" style="background:rgba(255,165,0,0.15)">🧪</div>
+      <div class="profile-menu-text">
+        <div class="profile-menu-label">Тест-режим</div>
+        <div class="profile-menu-desc">Путь Славы, отзывы, сертификаты</div>
       </div>
       <div class="profile-menu-arrow">›</div>
     </div>
@@ -3294,6 +3352,127 @@ function renderAdminOrders() {
     </div>`;
 }
 
+// ══════════════════════════════════════════════
+// ТЕСТ-РЕЖИМ (только для администраторов)
+// ══════════════════════════════════════════════
+function renderTestPanel() {
+  const info = getUserLevelInfo();
+  const body = document.getElementById('profile-body');
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <button onclick="adminBack()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text1);padding:8px 14px;border-radius:10px;font-size:14px;cursor:pointer;">← Назад</button>
+      <div style="font-weight:700;font-size:16px;">🧪 Тест-режим</div>
+    </div>
+
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;">
+      <div style="font-weight:600;font-size:14px;margin-bottom:4px;">📊 Текущий статус</div>
+      <div style="color:var(--text2);font-size:13px;">Потрачено: <b style="color:var(--text1)">${Math.floor(info.spent)}₽</b></div>
+      <div style="color:var(--text2);font-size:13px;">Уровень: <b style="color:var(--text1)">${info.current ? info.current.name : '🆕 Новенький'}</b></div>
+      <div style="color:var(--text2);font-size:13px;">Баланс: <b style="color:var(--text1)">${Math.floor(window._userBalance||0)}₽</b></div>
+    </div>
+
+    <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">🏆 Путь Славы</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+      <button onclick="testAddSpent(500)" class="admin-btn" style="font-size:13px;padding:10px;">+500₽ (Ур.1)</button>
+      <button onclick="testAddSpent(1000)" class="admin-btn" style="font-size:13px;padding:10px;">+1000₽ (Ур.2)</button>
+      <button onclick="testAddSpent(3000)" class="admin-btn" style="font-size:13px;padding:10px;">+3000₽ (Ур.3)</button>
+      <button onclick="testAddSpent(5000)" class="admin-btn" style="font-size:13px;padding:10px;">+5000₽ (Ур.4)</button>
+      <button onclick="testAddSpent(10000)" class="admin-btn" style="font-size:13px;padding:10px;">+10000₽ (Ур.5)</button>
+      <button onclick="testAddSpent(50000)" class="admin-btn" style="font-size:13px;padding:10px;">+50000₽ (Ур.10)</button>
+    </div>
+    <button onclick="testResetSpent()" style="width:100%;background:rgba(255,101,132,0.15);border:1px solid rgba(255,101,132,0.3);color:#ff6584;padding:10px;border-radius:10px;font-size:13px;cursor:pointer;margin-bottom:16px;">🔄 Сбросить потраченное</button>
+
+    <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">⭐ Отзывы</div>
+    <div style="margin-bottom:8px;">
+      <select id="test-review-service" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text1);padding:10px;border-radius:10px;font-size:13px;margin-bottom:8px;">
+        <option value="1">Spotify</option>
+        <option value="2">ChatGPT</option>
+        <option value="3">Discord</option>
+      </select>
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        ${[1,2,3,4,5].map(r => `<button onclick="setTestRating(${r})" id="test-star-${r}" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text1);padding:8px;border-radius:8px;font-size:16px;cursor:pointer;">${r <= 3 ? '⭐' : '⭐'}</button>`).join('')}
+      </div>
+      <textarea id="test-review-text" placeholder="Текст отзыва..." style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text1);padding:10px;border-radius:10px;font-size:13px;height:80px;resize:none;box-sizing:border-box;" rows="3">Отличный сервис! Всё работает быстро и качественно.</textarea>
+    </div>
+    <button onclick="testAddReview()" class="admin-btn" style="width:100%;margin-bottom:16px;">✅ Добавить тестовый отзыв</button>
+
+    <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">🎁 Сертификаты</div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;">
+      <div style="font-size:13px;color:var(--text2);">Введи код сертификата для тестирования активации:</div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <input id="test-cert-code" placeholder="GIFT-XXXXXXXX" style="flex:1;background:var(--surface3,#1e1e2e);border:1px solid var(--border);color:var(--text1);padding:10px;border-radius:10px;font-size:13px;" />
+        <button onclick="testActivateCert()" class="admin-btn" style="padding:10px 14px;">Активировать</button>
+      </div>
+      <div id="test-cert-result" style="font-size:12px;margin-top:6px;min-height:16px;"></div>
+    </div>
+  `;
+  window._testRating = 5;
+  // Подсвечиваем звёзды
+  setTimeout(() => updateTestStars(5), 50);
+}
+
+let _testRating = 5;
+function setTestRating(r) {
+  _testRating = r;
+  updateTestStars(r);
+}
+function updateTestStars(r) {
+  for(let i=1;i<=5;i++) {
+    const btn = document.getElementById(`test-star-${i}`);
+    if (btn) btn.style.background = i <= r ? 'rgba(255,193,7,0.2)' : 'var(--surface2)';
+  }
+}
+
+async function testAddSpent(amount) {
+  showToast('⏳ Добавляем...');
+  const res = await apiCall('test_add_spent', { amount });
+  if (res.ok) {
+    window._levelData.spent = res.spent || (window._levelData.spent + amount);
+    showToast(`✅ +${amount}₽ добавлено. Итого: ${Math.floor(res.spent)}₽`);
+    renderTestPanel();
+  } else {
+    showToast('❌ Ошибка: ' + (res.error || 'неизвестно'));
+  }
+}
+
+async function testResetSpent() {
+  const res = await apiCall('test_reset_spent');
+  if (res.ok) {
+    window._levelData.spent = 0;
+    showToast('✅ Потраченное сброшено');
+    renderTestPanel();
+  } else {
+    showToast('❌ Ошибка сброса');
+  }
+}
+
+async function testAddReview() {
+  const serviceId = parseInt(document.getElementById('test-review-service')?.value || 1);
+  const text = document.getElementById('test-review-text')?.value.trim() || '';
+  const res = await apiCall('test_add_review', { service_id: serviceId, rating: _testRating, text });
+  if (res.ok) {
+    showToast('✅ Отзыв добавлен и одобрен');
+  } else {
+    showToast('❌ Ошибка: ' + (res.error || ''));
+  }
+}
+
+async function testActivateCert() {
+  const code = document.getElementById('test-cert-code')?.value.trim().toUpperCase();
+  const resultEl = document.getElementById('test-cert-result');
+  if (!code) { if(resultEl) { resultEl.style.color='#ff6584'; resultEl.textContent='Введи код'; } return; }
+  if(resultEl) { resultEl.style.color='var(--text2)'; resultEl.textContent='⏳ Проверяем...'; }
+  const res = await apiCall('activate_gift', { code });
+  if (res.ok) {
+    window._userBalance = res.balance || (window._userBalance + res.amount);
+    const chipEl = document.getElementById('balance-chip');
+    if (chipEl) chipEl.textContent = `${Math.floor(window._userBalance)}₽`;
+    if(resultEl) { resultEl.style.color='#43e97b'; resultEl.textContent=`✅ Зачислено ${res.amount}₽! Баланс: ${Math.floor(res.balance)}₽`; }
+  } else {
+    if(resultEl) { resultEl.style.color='#ff6584'; resultEl.textContent=`❌ ${res.error||'Ошибка'}`; }
+  }
+}
+
 function renderAdminPromo() {
   document.getElementById('profile-body').innerHTML = `
     <div class="admin-sub-panel">
@@ -3318,10 +3497,11 @@ function renderAdminPromo() {
   document.getElementById('promo-code').addEventListener('input', function() {
     this.value = this.value.toUpperCase();
   });
-  // Запрашиваем список у бота
-  if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'get_promos' }));
-  // Если не Telegram или данные уже есть локально — показываем кэш
+  // Показываем кеш сразу, потом обновляем через API
   if (window._promosCache) renderPromoList(window._promosCache);
+  loadUserData().then(() => {
+    if (window._promosCache) renderPromoList(window._promosCache);
+  }).catch(() => {});
 }
 
 function renderPromoList(promos) {
