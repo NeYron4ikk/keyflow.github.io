@@ -2265,7 +2265,41 @@ window.addEventListener('message', function(e) {
       }
       window._pendingPromoCode = null;
     }
-    // Список промокодов от бота
+    // Данные уровня от бота
+    if (d.action === 'level_data') {
+      window._levelData = { spent: d.spent || 0, level: d.level || 0, promos: d.promos || [] };
+      // Если экран уровня открыт — перерисовываем с актуальными данными
+      const title = document.querySelector('.admin-sub-title');
+      if (title && title.textContent.includes('уровень')) renderLevelScreen();
+      // Обновляем бейдж в меню профиля
+      const levelInfo = getUserLevelInfo();
+      const descEl = document.querySelector('.profile-menu-item [onclick*="renderLevelScreen"] .profile-menu-desc');
+      if (descEl) descEl.textContent = `${levelInfo.current ? levelInfo.current.name : 'Нет уровня'} · ${Math.floor(levelInfo.spent)}₽ потрачено`;
+    }
+    // Активация сертификата успешна
+    if (d.action === 'gift_activated') {
+      window._userBalance = parseFloat(d.new_balance) || (window._userBalance || 0) + parseFloat(d.amount);
+      const fmt = `${window._userBalance.toFixed(0)}₽`;
+      const chipEl = document.getElementById('profile-header-balance');
+      if (chipEl) chipEl.textContent = fmt;
+      showToast(`✅ Сертификат активирован! +${d.amount}₽ на баланс`);
+      document.getElementById('gift-activate-input') && (document.getElementById('gift-activate-input').value = '');
+    }
+    // Результат колеса от бота
+    if (d.action === 'wheel_result') {
+      window._wheelBotResult = d;
+      if (window._wheelAnimDone) {
+        // Анимация уже закончилась — сразу показываем
+        showWheelResult(0, d);
+      }
+      // Если анимация ещё идёт — она сама покажет когда закончится
+      // Обновляем баланс в шапке если бонус
+      if (d.prize_type === 'bonus') {
+        window._userBalance = parseFloat(d.new_balance) || (window._userBalance || 0) + parseFloat(d.prize_value);
+        const chipEl = document.getElementById('profile-header-balance');
+        if (chipEl) chipEl.textContent = `${window._userBalance.toFixed(0)}₽`;
+      }
+    }
     if (d.action === 'promos_list') {
       renderPromoList(d.promos || []);
     }
@@ -2427,6 +2461,9 @@ function getUserLevelInfo() {
 }
 
 function renderLevelScreen() {
+  // Запрашиваем актуальные данные у бота
+  if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'get_level_data' }));
+
   const info = getUserLevelInfo();
   const spent = info.spent;
   const currentLevel = info.current ? info.current.level : 0;
@@ -2642,7 +2679,10 @@ function spinWheel() {
   const btn = document.getElementById('wheel-btn');
   if (btn) btn.disabled = true;
 
-  // Рандомный сектор
+  // Запрашиваем у бота что выпало — он решает
+  if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'spin_wheel' }));
+
+  // Запускаем случайную анимацию (визуально), результат придёт от бота
   const n = WHEEL_SECTORS.length;
   const targetIdx = Math.floor(Math.random() * n);
   const arc = (2 * Math.PI) / n;
@@ -2650,6 +2690,10 @@ function spinWheel() {
   const duration = 4000;
   const start = performance.now();
   const startAngle = wheelAngle;
+
+  // Сохраняем колбэк — вызовется когда бот пришлёт реальный результат
+  window._wheelAnimDone = false;
+  window._wheelBotResult = null;
 
   function animate(now) {
     const elapsed = now - start;
@@ -2662,25 +2706,57 @@ function spinWheel() {
       requestAnimationFrame(animate);
     } else {
       wheelSpinning = false;
-      // Сохраняем дату — один раз в день
+      window._wheelAnimDone = true;
       window._lastSpinDate = today;
-      showWheelResult(targetIdx);
-      // Отправляем в бот
-      if (tg?.sendData) tg.sendData(JSON.stringify({ action: 'spin_wheel' }));
+      // Если бот уже ответил — показываем его результат
+      if (window._wheelBotResult !== null) {
+        showWheelResult(window._wheelBotResult.idx, window._wheelBotResult);
+      } else {
+        // Ждём ответа бота
+        const resultEl = document.getElementById('wheel-result');
+        if (resultEl) {
+          resultEl.innerHTML = '⏳ Получаем результат...';
+          resultEl.classList.add('show');
+        }
+      }
     }
   }
   requestAnimationFrame(animate);
 }
 
-function showWheelResult(idx) {
-  const sector = WHEEL_SECTORS[idx];
+function showWheelResult(idx, botData) {
   const result = document.getElementById('wheel-result');
   if (!result) return;
-  const isWin = !sector.label.includes('Пусто');
-  result.innerHTML = isWin
-    ? `🎉 <b>${sector.label}!</b><br><span style="font-size:12px;color:var(--text2);font-weight:400">Приз придёт в бот через секунду</span>`
-    : `😅 <b>Пусто!</b><br><span style="font-size:12px;color:var(--text2);font-weight:400">Возвращайся завтра!</span>`;
-  result.style.borderColor = isWin ? 'rgba(108,99,255,0.3)' : 'var(--border)';
+
+  if (botData) {
+    // Результат от бота — достоверный
+    const type = botData.prize_type;
+    const value = botData.prize_value;
+    const label = botData.label || '';
+
+    if (type === 'empty') {
+      result.innerHTML = `😅 <b>Не повезло!</b><br><span style="font-size:12px;color:var(--text2);">Возвращайся завтра — повезёт! 🍀</span>`;
+      result.style.borderColor = 'var(--border)';
+    } else if (type === 'bonus') {
+      // Обновляем баланс локально
+      window._userBalance = (window._userBalance || 0) + parseFloat(value);
+      const chipEl = document.getElementById('profile-header-balance');
+      if (chipEl) chipEl.textContent = `${window._userBalance.toFixed(0)}₽`;
+      result.innerHTML = `🎉 <b>+${value}₽ на баланс!</b><br><span style="font-size:12px;color:var(--text2);">Зачислено — проверь в профиле 💰</span>`;
+      result.style.borderColor = 'rgba(67,233,123,0.4)';
+    } else if (type === 'discount') {
+      result.innerHTML = `🎉 <b>${label}</b><br><span style="font-size:12px;color:var(--text2);">Промокод отправлен в бот! 🎟</span>`;
+      result.style.borderColor = 'rgba(108,99,255,0.4)';
+    }
+  } else {
+    // Fallback — только анимация без данных бота
+    const sector = WHEEL_SECTORS[idx];
+    const isWin = !sector.label.includes('Пусто');
+    result.innerHTML = isWin
+      ? `🎉 <b>${sector.label}!</b><br><span style="font-size:12px;color:var(--text2);">Приз придёт в бот через секунду</span>`
+      : `😅 <b>Пусто!</b><br><span style="font-size:12px;color:var(--text2);">Возвращайся завтра!</span>`;
+    result.style.borderColor = isWin ? 'rgba(108,99,255,0.3)' : 'var(--border)';
+  }
   result.classList.add('show');
 }
 
@@ -2886,18 +2962,22 @@ function buyGiftCertificate() {
     showToast('❌ Минимум 100₽');
     return;
   }
+  if (!tg?.sendData) { showToast('❌ Открой через Telegram бот'); return; }
   tg.sendData(JSON.stringify({ action: 'buy_gift', amount: giftAmount }));
-  showToast('🎁 Запрос отправлен! Код придёт в бот.');
+  showToast('🎁 Запрос отправлен! Код придёт в бот через секунду.');
+  giftAmount = null;
+  renderGiftTab();
 }
 
 function activateGiftCertificate() {
-  const code = document.getElementById('gift-activate-input')?.value?.trim();
+  const code = document.getElementById('gift-activate-input')?.value?.trim().toUpperCase();
   if (!code || code.length < 5) {
     showToast('❌ Введи код сертификата');
     return;
   }
+  if (!tg?.sendData) { showToast('❌ Открой через Telegram бот'); return; }
   tg.sendData(JSON.stringify({ action: 'activate_gift', code }));
-  showToast('🔑 Запрос отправлен!');
+  showToast('🔑 Проверяем сертификат...');
 }
 
 renderCatalog();
