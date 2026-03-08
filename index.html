@@ -1389,6 +1389,13 @@ async function loadUserData() {
     const res = await fetch(`${CONFIG.SERVER_URL}/api/data?init_data=${encodeURIComponent(initData)}`);
     if (!res.ok) return;
     const d = await res.json();
+    // Сохраняем флаг спина сегодня
+    if (d.spun_today !== undefined) {
+      window._apiSpunToday = d.spun_today;
+      if (d.spun_today) {
+        window._lastSpinDate = new Date().toDateString();
+      }
+    }
     // Сохраняем промокоды
     window._publicPromos = d.promos || [];
     window._promosCache = d.promos || [];
@@ -1424,7 +1431,7 @@ const CONFIG = {
   USDT_RATE:     90,                    // ← курс RUB/USDT (обновляй раз в день)
   CRYPTO_BOT_URL: 'https://t.me/CryptoBot', // ← ссылка инвойса придёт из бота
   YOOKASSA_URL:  '',                    // ← заполнит бот динамически
-  SERVER_URL:    'http://45.150.36.21:8080', // ← IP адрес твоего VPS
+  SERVER_URL:    'https://45-150-36-21.sslip.io', // HTTPS через Caddy
 };
 
 // ══════════════════════════════════════════════
@@ -2681,7 +2688,8 @@ let wheelAngle = 0;
 
 function renderWheelScreen() {
   const today = new Date().toDateString();
-  const alreadySpun = window._lastSpinDate === today;
+  // Проверяем дату из API данных (загружаются при старте)
+  const alreadySpun = window._lastSpinDate === today || window._apiSpunToday === true;
 
   document.getElementById('profile-body').innerHTML = `
     <div class="admin-sub-panel">
@@ -2772,7 +2780,7 @@ const WHEEL_SECTOR_PRIZES = [
 function spinWheel() {
   if (wheelSpinning) return;
   const today = new Date().toDateString();
-  if (window._lastSpinDate === today) {
+  if (window._lastSpinDate === today || window._apiSpunToday === true) {
     showToast('⏳ Уже крутил сегодня! Приходи завтра.');
     return;
   }
