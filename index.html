@@ -2816,27 +2816,33 @@ function spinWheel() {
     } else {
       wheelSpinning = false;
       window._lastSpinDate = today;
+      window._apiSpunToday = true;
 
       const prize = WHEEL_SECTOR_PRIZES[targetIdx];
 
       // Показываем результат сразу
       showWheelResult(targetIdx, prize);
 
-      // Обновляем баланс локально если бонус
-      if (prize.type === 'bonus') {
-        window._userBalance = (window._userBalance || 0) + parseFloat(prize.value);
-        const chipEl = document.getElementById('profile-header-balance');
-        if (chipEl) chipEl.textContent = `${window._userBalance.toFixed(0)}₽`;
-      }
-
-      // Сообщаем боту — он запишет в БД и пришлёт промокод если скидка
-      if (tg?.sendData) tg.sendData(JSON.stringify({
-        action: 'spin_wheel',
-        sector_idx: targetIdx,
+      // Записываем спин в API (сохраняет в БД и начисляет баланс)
+      apiCall('spin_wheel', {
         prize_type: prize.type,
         prize_value: prize.value,
+        sector_idx: targetIdx,
         service_id: prize.service_id || 0
-      }));
+      }).then(res => {
+        if (res.ok && res.balance !== undefined) {
+          window._userBalance = res.balance;
+          const chipEl = document.getElementById('balance-chip');
+          if (chipEl) chipEl.textContent = `${Math.floor(res.balance)}₽`;
+        }
+      }).catch(() => {
+        // Обновляем баланс локально если бонус
+        if (prize.type === 'bonus') {
+          window._userBalance = (window._userBalance || 0) + parseFloat(prize.value);
+          const chipEl = document.getElementById('balance-chip');
+          if (chipEl) chipEl.textContent = `${Math.floor(window._userBalance)}₽`;
+        }
+      });
     }
   }
   requestAnimationFrame(animate);
@@ -3379,6 +3385,14 @@ function renderTestPanel() {
       <div style="color:var(--text2);font-size:13px;">Баланс: <b style="color:var(--text1)">${Math.floor(window._userBalance||0)}₽</b></div>
     </div>
 
+    <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">💰 Баланс</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+      <button onclick="testAddBalance(100)" class="admin-btn" style="font-size:13px;padding:10px;">+100₽</button>
+      <button onclick="testAddBalance(500)" class="admin-btn" style="font-size:13px;padding:10px;">+500₽</button>
+      <button onclick="testAddBalance(1000)" class="admin-btn" style="font-size:13px;padding:10px;">+1000₽</button>
+      <button onclick="testAddBalance(5000)" class="admin-btn" style="font-size:13px;padding:10px;">+5000₽</button>
+    </div>
+
     <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;">🏆 Путь Славы</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
       <button onclick="testAddSpent(500)" class="admin-btn" style="font-size:13px;padding:10px;">+500₽ (Ур.1)</button>
@@ -3428,6 +3442,20 @@ function updateTestStars(r) {
   for(let i=1;i<=5;i++) {
     const btn = document.getElementById(`test-star-${i}`);
     if (btn) btn.style.background = i <= r ? 'rgba(255,193,7,0.2)' : 'var(--surface2)';
+  }
+}
+
+async function testAddBalance(amount) {
+  showToast('⏳ Начисляем...');
+  const res = await apiCall('test_add_balance', { amount });
+  if (res.ok) {
+    window._userBalance = res.balance;
+    const chipEl = document.getElementById('balance-chip');
+    if (chipEl) chipEl.textContent = `${Math.floor(res.balance)}₽`;
+    showToast(`✅ +${amount}₽ зачислено. Баланс: ${Math.floor(res.balance)}₽`);
+    renderTestPanel();
+  } else {
+    showToast('❌ Ошибка: ' + (res.error || ''));
   }
 }
 
