@@ -1409,6 +1409,10 @@ async function loadUserData() {
       window._userBalance = parseFloat(d.balance) || 0;
       const chipEl = document.getElementById('balance-chip');
       if (chipEl) chipEl.textContent = `${window._userBalance.toFixed(0)}₽`;
+      const headerChip = document.getElementById('profile-header-balance');
+      if (headerChip) headerChip.textContent = `${Math.floor(window._userBalance)}₽`;
+      const amountEl = document.getElementById('balance-amount');
+      if (amountEl) amountEl.textContent = `${Math.floor(window._userBalance)}₽`;
     }
     // Сохраняем уровень и личные промокоды
     window._levelData = {
