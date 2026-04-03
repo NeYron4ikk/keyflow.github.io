@@ -3158,6 +3158,10 @@ function renderProfileMain() {
   document.getElementById('profile-sub').textContent = username;
   document.getElementById('admin-badge').style.display = isAdmin ? 'inline-flex' : 'none';
 
+  // Обновляем баланс в шапке профиля
+  const _headerBal = document.getElementById('profile-header-balance');
+  if (_headerBal) _headerBal.textContent = (window._userBalance || 0) > 0 ? Math.floor(window._userBalance) + '₽' : '0₽';
+
   // Уровень пользователя — убираем старый бейдж перед добавлением нового
   document.querySelectorAll('.level-badge').forEach(el => el.remove());
   const levelInfo = getUserLevelInfo();
@@ -3257,7 +3261,7 @@ function renderProfileMain() {
       <div class="profile-menu-icon" style="background:rgba(67,233,123,0.15)">💰</div>
       <div class="profile-menu-text">
         <div class="profile-menu-label">Мой баланс</div>
-        <div class="profile-menu-desc" id="profile-balance-desc">Загрузка...</div>
+        <div class="profile-menu-desc" id="profile-balance-desc">${window._userBalance > 0 ? Math.floor(window._userBalance) + '₽ доступно' : 'Пополни и оплачивай с баланса'}</div>
       </div>
       <div class="profile-menu-arrow">›</div>
     </div>
