@@ -1368,7 +1368,7 @@ if (tg) {
   tg.setHeaderColor('#0a0a0f');
   tg.setBackgroundColor('#0a0a0f');
   // Загружаем все данные пользователя через HTTP API сразу при старте
-  setTimeout(() => loadUserData(), 800);
+  window._userBalance = 0; setTimeout(() => loadUserData(), 800);
 }
 
 // ── HTTP API ────────────────────────────────────────────────────────────────
@@ -3134,8 +3134,15 @@ document.getElementById('user-badge').addEventListener('click', openProfile);
 function openProfile() {
   renderProfileMain();
   document.getElementById('profile-overlay').classList.add('open');
-  // Обновляем данные через HTTP API
-  loadUserData().then(() => renderProfileMain()).catch(() => {});
+  // Обновляем данные через HTTP API и перерисовываем профиль
+  loadUserData().then(() => {
+    renderProfileMain();
+    // Принудительно обновляем элементы баланса
+    const hb = document.getElementById('profile-header-balance');
+    if (hb) hb.textContent = Math.floor(window._userBalance || 0) + '₽';
+    const bd = document.getElementById('profile-balance-desc');
+    if (bd) bd.textContent = (window._userBalance || 0) > 0 ? Math.floor(window._userBalance) + '₽ доступно' : 'Пополни и оплачивай с баланса';
+  }).catch(() => {});
 }
 
 function closeProfile() {
