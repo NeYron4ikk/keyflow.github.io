@@ -1367,9 +1367,64 @@ if (tg) {
   tg.expand();
   tg.setHeaderColor('#0a0a0f');
   tg.setBackgroundColor('#0a0a0f');
-  // Загружаем все данные пользователя через HTTP API сразу при старте
-  window._userBalance = 0; setTimeout(() => loadUserData(), 800);
 }
+
+// ── UI GUARD — рендер только после загрузки данных с сервера ────────────────
+window._userBalance = 0;
+window._userLevel   = 0;
+window._userSpent   = 0;
+window._isAdmin     = false;
+window._spunToday   = false;
+window._personalPromos = [];
+window._promosList  = [];
+
+const UI = {
+  _loaded: false,
+
+  async init() {
+    try {
+      const initData = tg?.initData || '';
+      if (!initData) { this._loaded = true; this._updateUI(); return; }
+      const res = await fetch(`${CONFIG.SERVER_URL}/api/data?init_data=${encodeURIComponent(initData)}`);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const d = await res.json();
+      window._userBalance    = parseFloat(d.balance)  || 0;
+      window._userLevel      = d.level     || 0;
+      window._userSpent      = d.spent     || 0;
+      window._isAdmin        = d.is_admin  || false;
+      window._spunToday      = d.spun_today || false;
+      window._personalPromos = d.personal_promos || [];
+      window._promosList     = d.promos || [];
+      window._publicPromos   = d.promos || [];
+      window._promosCache    = d.promos || [];
+      window._levelData      = { spent: d.spent || 0, level: d.level || 0, promos: d.personal_promos || [] };
+      isAdmin = d.is_admin || false;
+    } catch(e) {
+      console.warn('[UI] Не удалось загрузить данные:', e.message);
+    }
+    this._loaded = true;
+    this._updateUI();
+  },
+
+  _updateUI() {
+    // Шапка профиля
+    const hb = document.getElementById('profile-header-balance');
+    if (hb) hb.textContent = Math.floor(window._userBalance) + '₽';
+    // Тест-кнопка для админа
+    const testBtn = document.getElementById('admin-test-btn');
+    if (testBtn) testBtn.style.display = window._isAdmin ? 'flex' : 'none';
+    // Если профиль открыт — перерисовать
+    const overlay = document.getElementById('profile-overlay');
+    if (overlay && overlay.classList.contains('open')) {
+      if (typeof renderProfileMain === 'function') renderProfileMain();
+    }
+  },
+
+  async refresh() {
+    this._loaded = false;
+    await this.init();
+  }
+};
 
 // ── HTTP API ────────────────────────────────────────────────────────────────
 async function apiCall(action, body = {}) {
@@ -3125,6 +3180,7 @@ function activateGiftCertificate() {
 }
 
 renderCatalog();
+UI.init(); // ← загружаем данные и обновляем UI
 
 // ══════════════════════════════════════════════
 // PROFILE & ADMIN PANEL
@@ -3139,14 +3195,15 @@ document.getElementById('user-badge').addEventListener('click', openProfile);
 function openProfile() {
   renderProfileMain();
   document.getElementById('profile-overlay').classList.add('open');
-  // Обновляем данные через HTTP API и перерисовываем профиль
-  loadUserData().then(() => {
+  // Грузим свежие данные и перерисовываем
+  UI.refresh().then(() => {
     renderProfileMain();
-    // Принудительно обновляем элементы баланса
     const hb = document.getElementById('profile-header-balance');
     if (hb) hb.textContent = Math.floor(window._userBalance || 0) + '₽';
     const bd = document.getElementById('profile-balance-desc');
     if (bd) bd.textContent = (window._userBalance || 0) > 0 ? Math.floor(window._userBalance) + '₽ доступно' : 'Пополни и оплачивай с баланса';
+    const ba = document.getElementById('balance-amount');
+    if (ba) ba.textContent = Math.floor(window._userBalance || 0) + '₽';
   }).catch(() => {});
 }
 
