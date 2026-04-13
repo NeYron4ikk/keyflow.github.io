@@ -2931,8 +2931,13 @@ function renderBalanceScreen() {
       </div>
     </div>`;
 
-  // Обновляем баланс через HTTP API
-  loadUserData().catch(() => {});
+  // Обновляем баланс через HTTP API и сразу показываем в экране
+  loadUserData().then(() => {
+    const el = document.getElementById('balance-amount');
+    if (el) el.textContent = Math.floor(window._userBalance || 0) + '₽';
+    const hb = document.getElementById('profile-header-balance');
+    if (hb) hb.textContent = Math.floor(window._userBalance || 0) + '₽';
+  }).catch(() => {});
 }
 
 let _selectedTopup = 0;
